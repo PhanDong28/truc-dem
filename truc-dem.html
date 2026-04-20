@@ -1,0 +1,1809 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lịch Trực Đêm – Kỹ Thuật</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDBgdQjwmjHO1_r5eVXr30LbmkXSXZsGmA",
+  authDomain: "kythuat-8ad95.firebaseapp.com",
+  projectId: "kythuat-8ad95",
+  storageBucket: "kythuat-8ad95.firebasestorage.app",
+  messagingSenderId: "238442313814",
+  appId: "1:238442313814:web:95c533e5f38731c1d1a3f7",
+  measurementId: "G-MKED4BDJL6"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+window._db = db;
+
+async function fbGet(col, docId) {
+  const snap = await getDoc(doc(db, col, docId));
+  return snap.exists() ? snap.data() : null;
+}
+async function fbSet(col, docId, data) {
+  await setDoc(doc(db, col, docId), data, { merge: true });
+}
+async function fbSetFull(col, docId, data) {
+  await setDoc(doc(db, col, docId), data);
+}
+async function fbDel(col, docId) {
+  await deleteDoc(doc(db, col, docId));
+}
+async function fbGetAll(col) {
+  const snap = await getDocs(collection(db, col));
+  const out = {};
+  snap.forEach(d => out[d.id] = d.data());
+  return out;
+}
+
+window._fbGet = fbGet;
+window._fbSet = fbSet;
+window._fbSetFull = fbSetFull;
+window._fbDel = fbDel;
+window._fbGetAll = fbGetAll;
+
+async function bootstrapIfNeeded() {
+  showSyncStatus('checking');
+  try {
+    const accSnap = await getDocs(collection(db, 'accounts'));
+    if (accSnap.empty) {
+      const DEF_ACCOUNTS = [
+        {id:'acc_admin', username:'admin', password:'admin123', name:'Quản Trị Viên', role:'admin', staffLink:null},
+        {id:'acc_q1', username:'quang', password:'123456', name:'Lê Hồng Quang', role:'staff', staffLink:'Lê Hồng Quang'},
+        {id:'acc_v2', username:'viet', password:'123456', name:'Trương Anh Việt', role:'staff', staffLink:'Trương Anh Việt'},
+        {id:'acc_h3', username:'hau', password:'123456', name:'Nguyễn Vĩnh Hậu', role:'staff', staffLink:'Nguyễn Vĩnh Hậu'},
+        {id:'acc_n4', username:'nguyen', password:'123456', name:'Nguyễn Trung Nguyên', role:'staff', staffLink:'Nguyễn Trung Nguyên'},
+        {id:'acc_h5', username:'hai', password:'123456', name:'Nguyễn Quang Hải', role:'staff', staffLink:'Nguyễn Quang Hải'},
+        {id:'acc_t6', username:'tuan', password:'123456', name:'Nguyễn Văn Anh Tuấn', role:'staff', staffLink:'Nguyễn Văn Anh Tuấn'},
+        {id:'acc_d7', username:'dong', password:'123456', name:'Phan Duy Đồng', role:'staff', staffLink:'Phan Duy Đồng'},
+        {id:'acc_h8', username:'hung', password:'123456', name:'Phan Việt Hưng', role:'staff', staffLink:'Phan Việt Hưng'},
+        {id:'acc_k9', username:'khang', password:'123456', name:'Nguyễn Hữu Khang', role:'staff', staffLink:'Nguyễn Hữu Khang'},
+        {id:'acc_d10', username:'dung', password:'123456', name:'Nguyễn Văn Dũng', role:'staff', staffLink:'Nguyễn Văn Dũng'},
+      ];
+      for (const acc of DEF_ACCOUNTS) {
+        await setDoc(doc(db, 'accounts', acc.id), acc);
+      }
+    }
+    const staffDoc = await fbGet('config', 'staff');
+    if (!staffDoc) {
+      const DEF_STAFF = ['Lê Hồng Quang','Trương Anh Việt','Nguyễn Vĩnh Hậu','Nguyễn Trung Nguyên',
+        'Nguyễn Quang Hải','Nguyễn Văn Anh Tuấn','Phan Duy Đồng','Phan Việt Hưng','Nguyễn Hữu Khang','Nguyễn Văn Dũng'];
+      await fbSet('config', 'staff', { list: DEF_STAFF });
+    }
+    showSyncStatus('online');
+  } catch(e) {
+    console.error('Bootstrap error:', e);
+    showSyncStatus('error');
+  }
+}
+
+async function loadAllFromFirebase() {
+  try {
+    const staffDoc = await fbGet('config', 'staff');
+    window._staff = staffDoc ? staffDoc.list : [];
+    const allAcc = await fbGetAll('accounts');
+    window._accounts = Object.values(allAcc);
+    const attAll = await fbGetAll('att');
+    window._att = attAll;
+    const attDayAll = await fbGetAll('attDay');
+    window._attDay = attDayAll;
+    const holidaysDoc = await fbGet('config', 'holidays');
+    window._holidays = holidaysDoc ? holidaysDoc.list : [];
+    // hlReg: trực đêm lễ (4.5h)
+    const hlRegAll = await fbGetAll('hlReg');
+    window._hlReg = hlRegAll;
+    // hlDayReg: trực ngày lễ (8h công chuẩn)
+    const hlDayRegAll = await fbGetAll('hlDayReg');
+    window._hlDayReg = hlDayRegAll;
+    return true;
+  } catch(e) {
+    console.error('Load error:', e);
+    showSyncStatus('error');
+    return false;
+  }
+}
+
+let _unsubAtt = null, _unsubAttDay = null, _unsubHlReg = null, _unsubHlDayReg = null;
+function startRealtimeListeners(m, y, onUpdate) {
+  if (_unsubAtt) _unsubAtt();
+  if (_unsubAttDay) _unsubAttDay();
+  if (_unsubHlReg) _unsubHlReg();
+  if (_unsubHlDayReg) _unsubHlDayReg();
+  const key = m + '_' + y;
+  _unsubAtt = onSnapshot(doc(db, 'att', key), snap => {
+    if (snap.exists()) window._att[key] = snap.data();
+    else delete window._att[key];
+    if (onUpdate) onUpdate();
+  });
+  _unsubAttDay = onSnapshot(doc(db, 'attDay', key), snap => {
+    if (snap.exists()) window._attDay[key] = snap.data();
+    else delete window._attDay[key];
+    if (onUpdate) onUpdate();
+  });
+  _unsubHlReg = onSnapshot(doc(db, 'hlReg', key), snap => {
+    if (snap.exists()) window._hlReg[key] = snap.data();
+    else delete window._hlReg[key];
+    if (onUpdate) onUpdate();
+  });
+  _unsubHlDayReg = onSnapshot(doc(db, 'hlDayReg', key), snap => {
+    if (snap.exists()) window._hlDayReg[key] = snap.data();
+    else delete window._hlDayReg[key];
+    if (onUpdate) onUpdate();
+  });
+}
+
+async function saveAtt(m, y) {
+  const key = m + '_' + y;
+  showSyncStatus('saving');
+  try {
+    const data = window._att[key] || {};
+    if (Object.keys(data).length === 0) await fbDel('att', key);
+    else await setDoc(doc(db, 'att', key), data);
+    showSyncStatus('online');
+  } catch(e) { showSyncStatus('error'); }
+}
+async function saveAttDay(m, y) {
+  const key = m + '_' + y;
+  showSyncStatus('saving');
+  try {
+    const data = window._attDay[key] || {};
+    if (Object.keys(data).length === 0) await fbDel('attDay', key);
+    else await setDoc(doc(db, 'attDay', key), data);
+    showSyncStatus('online');
+  } catch(e) { showSyncStatus('error'); }
+}
+async function saveHlReg(m, y) {
+  const key = m + '_' + y;
+  showSyncStatus('saving');
+  try {
+    const data = window._hlReg[key] || {};
+    if (Object.keys(data).length === 0) await fbDel('hlReg', key);
+    else await setDoc(doc(db, 'hlReg', key), data);
+    showSyncStatus('online');
+  } catch(e) { showSyncStatus('error'); }
+}
+async function saveHlDayReg(m, y) {
+  const key = m + '_' + y;
+  showSyncStatus('saving');
+  try {
+    const data = window._hlDayReg[key] || {};
+    if (Object.keys(data).length === 0) await fbDel('hlDayReg', key);
+    else await setDoc(doc(db, 'hlDayReg', key), data);
+    showSyncStatus('online');
+  } catch(e) { showSyncStatus('error'); }
+}
+async function saveStaffList() {
+  showSyncStatus('saving');
+  try { await fbSet('config', 'staff', { list: window._staff }); showSyncStatus('online'); }
+  catch(e) { showSyncStatus('error'); }
+}
+async function saveAccountDoc(acc) {
+  showSyncStatus('saving');
+  try { await setDoc(doc(db, 'accounts', acc.id), acc); showSyncStatus('online'); }
+  catch(e) { showSyncStatus('error'); }
+}
+async function deleteAccountDoc(id) {
+  showSyncStatus('saving');
+  try { await fbDel('accounts', id); showSyncStatus('online'); }
+  catch(e) { showSyncStatus('error'); }
+}
+async function saveHolidays() {
+  showSyncStatus('saving');
+  try { await fbSet('config', 'holidays', { list: window._holidays }); showSyncStatus('online'); }
+  catch(e) { showSyncStatus('error'); }
+}
+
+window._saveAtt = saveAtt;
+window._saveAttDay = saveAttDay;
+window._saveHlReg = saveHlReg;
+window._saveHlDayReg = saveHlDayReg;
+window._saveStaffList = saveStaffList;
+window._saveAccountDoc = saveAccountDoc;
+window._deleteAccountDoc = deleteAccountDoc;
+window._saveHolidays = saveHolidays;
+window._startRealtimeListeners = startRealtimeListeners;
+window._bootstrapIfNeeded = bootstrapIfNeeded;
+window._loadAllFromFirebase = loadAllFromFirebase;
+
+window.addEventListener('DOMContentLoaded', async () => {
+  await bootstrapIfNeeded();
+  const ok = await loadAllFromFirebase();
+  if (ok) {
+    window._firebaseReady = true;
+    if (window._onFirebaseReady) window._onFirebaseReady();
+  }
+});
+</script>
+
+<style>
+:root {
+  --blue:#2a5aa4; --blue-d:#1e4282; --blue-dd:#152f60;
+  --blue-l:#eef3fb; --blue-m:#b8cef0;
+  --gold:#f4a31d; --gold-d:#d4880d; --gold-l:#fef7e8; --gold-m:#fad27a;
+  --bg:#f0f4fb; --white:#fff; --surface:#f7f9fd;
+  --border:#d5dff0; --border2:#b0c4e0;
+  --text:#1a2d4a; --text2:#4a6080; --text3:#8ea5c0;
+  --green:#16a34a; --green-l:#f0fdf4; --green-m:#86efac;
+  --amber:#d97706; --amber-l:#fffbeb; --amber-m:#fcd34d;
+  --teal:#0d9488; --teal-l:#ccfbf1;
+  --red:#dc2626; --red-l:#fef2f2;
+  --purple:#7c3aed; --purple-l:#f5f3ff; --purple-m:#c4b5fd;
+  --rose:#e11d48; --rose-l:#fff1f2;
+  --r:8px; --r-lg:14px;
+  --sh:0 2px 12px rgba(42,90,164,0.10);
+  --sh-lg:0 4px 24px rgba(42,90,164,0.14);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Be Vietnam Pro',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+
+/* ── LOADING ── */
+#loadingOverlay{position:fixed;inset:0;background:linear-gradient(145deg,var(--blue-dd) 0%,var(--blue) 55%,#1a6e7a 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;transition:opacity .5s}
+#loadingOverlay.hidden{opacity:0;pointer-events:none}
+.load-logo{width:76px;height:76px;background:rgba(255,255,255,0.15);border:2px solid rgba(255,255,255,0.3);border-radius:22px;display:flex;align-items:center;justify-content:center;font-size:38px;margin-bottom:20px;animation:loadPulse 1.6s ease-in-out infinite;box-shadow:0 8px 32px rgba(0,0,0,0.3)}
+@keyframes loadPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+.load-title{font-size:24px;font-weight:900;color:#fff;letter-spacing:-.5px;margin-bottom:6px}
+.load-msg{font-size:13px;color:rgba(255,255,255,0.7);font-weight:600}
+.load-bar{width:220px;height:3px;background:rgba(255,255,255,0.2);border-radius:2px;margin-top:28px;overflow:hidden}
+.load-bar-inner{height:100%;background:var(--gold);border-radius:2px;animation:loadBar 1.8s ease-in-out infinite}
+@keyframes loadBar{0%{width:0%;margin-left:0}50%{width:75%;margin-left:0}100%{width:0%;margin-left:100%}}
+
+/* ── SYNC STATUS ── */
+#syncStatus{position:fixed;bottom:16px;right:16px;z-index:9000;display:flex;align-items:center;gap:8px;background:var(--white);border:1.5px solid var(--border);border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;color:var(--text2);box-shadow:var(--sh-lg);transition:all .3s;opacity:0;pointer-events:none}
+#syncStatus.show{opacity:1}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--text3);transition:background .3s}
+#syncStatus.checking .sync-dot,#syncStatus.saving .sync-dot{background:var(--gold);animation:sdBlink .6s infinite}
+#syncStatus.online .sync-dot{background:var(--green)}
+#syncStatus.error .sync-dot{background:var(--red)}
+@keyframes sdBlink{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* ── LOGIN ── */
+#loginScreen{display:none;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(145deg,var(--blue-dd) 0%,var(--blue) 55%,#1a6e7a 100%);position:fixed;inset:0;z-index:9999}
+#loginScreen.active{display:flex}
+#loginScreen.fade-out{opacity:0;pointer-events:none;transition:opacity .35s}
+.login-box{background:var(--white);border-radius:22px;padding:46px 42px;width:100%;max-width:420px;box-shadow:0 28px 80px rgba(0,0,0,0.28);animation:slideUp .4s cubic-bezier(.16,1,.3,1)}
+@keyframes slideUp{from{opacity:0;transform:translateY(32px)}to{opacity:1;transform:translateY(0)}}
+.login-logo{width:64px;height:64px;background:linear-gradient(135deg,var(--blue),var(--blue-d));border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 20px;box-shadow:0 8px 24px rgba(42,90,164,0.4)}
+.login-title{font-size:23px;font-weight:900;text-align:center;color:var(--text);margin-bottom:3px;letter-spacing:-.4px}
+.login-sub{font-size:13px;color:var(--text3);text-align:center;margin-bottom:24px;font-weight:600}
+/* ── Ẩn firebase badge trên login, chỉ hiện dòng kết nối nhỏ ── */
+.login-connect-badge{display:flex;align-items:center;justify-content:center;gap:5px;background:var(--green-l);border:1px solid var(--green-m);border-radius:7px;padding:4px 10px;font-size:11.5px;font-weight:700;color:var(--green);margin-bottom:18px}
+.login-connect-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:sdBlink 2s infinite}
+.login-field{margin-bottom:15px}
+.login-field label{display:block;font-size:10.5px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.login-field input{width:100%;height:46px;padding:0 14px;border:1.5px solid var(--border2);border-radius:10px;font-family:inherit;font-size:14px;font-weight:600;color:var(--text);background:var(--surface);outline:none;transition:border-color .15s,box-shadow .15s}
+.login-field input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(42,90,164,0.12)}
+.login-btn{width:100%;height:48px;background:linear-gradient(135deg,var(--blue),var(--blue-d));color:#fff;border:none;border-radius:11px;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;margin-top:10px;transition:all .15s;letter-spacing:.2px;box-shadow:0 4px 16px rgba(42,90,164,0.35)}
+.login-btn:hover{background:linear-gradient(135deg,var(--blue-d),var(--blue-dd));transform:translateY(-1px);box-shadow:0 8px 24px rgba(42,90,164,0.4)}
+.login-btn:active{transform:translateY(0)}
+.login-err{background:var(--red-l);border:1.5px solid var(--red);color:var(--red);border-radius:8px;padding:10px 14px;font-size:13px;font-weight:700;margin-bottom:14px;display:none}
+.login-err.show{display:block}
+
+/* ── APP ── */
+#appScreen{display:none}
+#appScreen.visible{display:block}
+.hdr{background:linear-gradient(90deg,var(--blue-dd) 0%,var(--blue) 100%);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:58px;box-shadow:0 3px 16px rgba(42,90,164,0.35);position:sticky;top:0;z-index:300}
+.hdr-brand{display:flex;align-items:center;gap:11px}
+.hdr-logo{width:36px;height:36px;background:var(--gold);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:19px;box-shadow:0 2px 8px rgba(0,0,0,0.2)}
+.hdr-title{font-size:16px;font-weight:900;letter-spacing:-.3px}
+.hdr-sub{font-size:11px;opacity:.7;margin-top:1px;font-weight:600}
+.hdr-right{display:flex;align-items:center;gap:10px}
+.user-badge{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,0.14);border:1.5px solid rgba(255,255,255,0.28);border-radius:8px;padding:5px 12px;font-size:12.5px;font-weight:700;color:#fff}
+.role-dot{width:8px;height:8px;border-radius:50%;background:#86efac}
+.role-dot.admin{background:var(--gold)}
+/* ── Badge kết nối gọn trong header ── */
+.conn-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(22,163,74,0.18);border:1px solid rgba(22,163,74,0.35);border-radius:6px;padding:4px 9px;font-size:11px;font-weight:700;color:#86efac}
+.conn-dot{width:5px;height:5px;border-radius:50%;background:#4ade80;animation:sdBlink 2.5s ease-in-out infinite}
+.hdr-actions{display:flex;gap:7px}
+.hbtn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:7px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.12);color:#fff;transition:all .14s}
+.hbtn:hover{background:rgba(255,255,255,0.25)}
+.hbtn.logout{border-color:rgba(220,38,38,0.55);background:rgba(220,38,38,0.22)}
+.hbtn.logout:hover{background:rgba(220,38,38,0.45)}
+.tabs{background:var(--white);border-bottom:2px solid var(--border);display:flex;padding:0 24px;position:sticky;top:58px;z-index:200;box-shadow:0 2px 8px rgba(42,90,164,0.07);overflow-x:auto}
+.tab{padding:13px 20px;font-size:13.5px;font-weight:700;color:var(--text2);border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .14s;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.tab:hover{color:var(--blue)}
+.tab.active{color:var(--blue);border-bottom-color:var(--gold)}
+.tab[data-admin-only]{display:none}
+.tab[data-admin-only].show{display:flex}
+.main{padding:22px 24px}
+.panel{display:none}.panel.active{display:block}
+
+/* ── PERM BANNER ── */
+.perm-banner{border-radius:10px;padding:10px 16px;font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.perm-banner.warn{background:var(--gold-l);border:1.5px solid var(--gold-m);color:var(--amber)}
+.perm-banner.locked{background:var(--red-l);border-color:#fca5a5;color:var(--red)}
+.perm-banner.ok{background:var(--green-l);border:1.5px solid var(--green-m);color:var(--green)}
+
+/* ── CARDS ── */
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);margin-bottom:18px}
+.card-head{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.toolbar{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.fld{display:flex;flex-direction:column;gap:4px}
+.fld label{font-size:10.5px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.7px}
+.fld select,.fld input{height:36px;padding:0 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-family:inherit;font-size:13.5px;font-weight:600;color:var(--text);background:var(--surface);outline:none;transition:border-color .15s}
+.fld select:focus,.fld input:focus{border-color:var(--blue)}
+.fld select{min-width:120px}.fld input{width:84px;max-width:200px}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:var(--r);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid var(--border2);background:var(--white);color:var(--text);transition:all .14s}
+.btn:hover{background:var(--blue-l);border-color:var(--blue);color:var(--blue)}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
+.btn-primary{background:linear-gradient(135deg,var(--blue),var(--blue-d));border-color:var(--blue-d);color:#fff}
+.btn-primary:hover{background:linear-gradient(135deg,var(--blue-d),var(--blue-dd));color:#fff}
+.btn-gold{background:var(--gold-l);border-color:var(--gold);color:var(--amber)}
+.btn-gold:hover{background:var(--gold);color:#fff;border-color:var(--gold-d)}
+.btn-green{background:var(--green-l);border-color:var(--green);color:var(--green)}
+.btn-green:hover{background:var(--green-m);color:#000}
+.btn-red{background:var(--red-l);border-color:var(--red);color:var(--red)}
+.btn-red:hover{background:var(--red);color:#fff}
+.btn-rose{background:var(--rose-l);border-color:#fda4af;color:var(--rose)}
+.btn-rose:hover{background:var(--rose);color:#fff}
+.btn-sm{padding:4px 10px;font-size:12px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;font-weight:700;color:var(--text2)}
+.leg{display:flex;align-items:center;gap:6px}
+.leg-box{width:18px;height:14px;border-radius:3px}
+.card-body{padding:18px 20px}
+
+/* ── MATRIX ── */
+.matrix-wrap{overflow-x:auto}
+table.mx{border-collapse:collapse;width:100%;table-layout:fixed}
+table.mx th,table.mx td{border:1px solid var(--border);padding:0;text-align:center}
+.col-name{width:160px}.col-d{width:42px;min-width:36px}
+.mx-r1{background:var(--blue);height:34px}
+.mx-r1 th{color:#fff;font-size:12px;font-weight:800;border-color:rgba(255,255,255,0.18)}
+.mx-r1 .th-nm{text-align:left;padding-left:14px;font-size:13px;position:sticky;left:0;z-index:11;background:var(--blue)}
+.mx-r2{background:var(--blue-d);height:26px}
+.mx-r2 th{font-size:9.5px;font-weight:700;color:rgba(255,255,255,0.75);border-color:rgba(255,255,255,0.12)}
+.mx-r2 .th-nm2{position:sticky;left:0;z-index:11;background:var(--blue-d)}
+.mx-r2 .dcn{color:#86efac}.mx-r2 .dt7{color:var(--gold-m)}.mx-r2 .dhl{color:#fca5a5}
+.mx-r1 .dcn2{color:#86efac}.mx-r1 .dt72{color:var(--gold-m)}
+td.nm{text-align:left;padding:0 10px 0 14px;font-size:12.5px;font-weight:700;white-space:nowrap;background:var(--white);position:sticky;left:0;z-index:5;border-right:2px solid var(--border2)}
+td.dc{height:36px;cursor:pointer;transition:background .1s;vertical-align:middle;user-select:none}
+td.dc:hover{background:var(--blue-l)!important}
+td.dc.no-edit{cursor:default!important}
+td.dc.no-edit:hover{background:inherit!important}
+td.dc.off{background:var(--white)}
+td.dc.vcn.off{background:#f0fdf4}
+td.dc.vt7.off{background:#fffbeb}
+td.dc.c-toi{background:#e8f0fc}
+td.dc.c-t7{background:#fef9c3}
+td.dc.c-toicn{background:var(--teal-l)}
+td.dc.c-holiday-truc{background:#ffd6d6}
+td.dc.past{opacity:.42;filter:grayscale(.4)}
+td.dc.past.off{background:#f1f4f9!important}
+td.dc.past:hover{background:inherit!important;cursor:default!important}
+td.dc.today-col{outline:2px solid var(--gold);outline-offset:-2px;position:relative;z-index:2}
+td.dc.today-col.off{background:#fef9ee!important}
+td.dc.today-col:hover{background:#fef3d0!important}
+td.dc.today-col.past{opacity:1;filter:none}
+th.today-th{background:var(--gold)!important;color:#fff!important;border-color:var(--gold-d)!important;position:relative}
+th.today-th::after{content:'▼';position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);font-size:8px;color:var(--gold);line-height:1}
+th.holiday-th{background:#c0392b!important;color:#fff!important;border-color:#a93226!important}
+.sun-row.today-sun{background:linear-gradient(90deg,#fef9ee,#fff);border-left:3px solid var(--gold)}
+.sun-row.today-sun .sun-date .badge{background:var(--gold-l);color:var(--amber);border:1px solid var(--gold-m)}
+.chk{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;pointer-events:none;color:inherit}
+.chk.toi{color:var(--blue)}.chk.t7{color:var(--amber)}.chk.toicn{color:var(--teal)}
+.chk.hl{color:#c0392b;font-size:10px}
+tbody.rows tr:nth-child(even) td.nm{background:#f7f9fd}
+tbody.rows tr:nth-child(even) td.dc.off{background:#f7f9fd}
+tbody.rows tr:nth-child(even) td.dc.vcn.off{background:#f0fdf4}
+tbody.rows tr:nth-child(even) td.dc.vt7.off{background:#fffbeb}
+.cnt-row td{height:24px;background:var(--surface);font-size:11px;font-weight:700;color:var(--text3)}
+.cnt-row td.has{background:var(--blue-l);color:var(--blue)}
+.cnt-row td.full{background:var(--blue-m);color:var(--blue-d)}
+.cnt-row .nm{background:var(--surface);font-size:11px;text-align:left}
+
+/* ── SUN LIST ── */
+.sun-row{display:flex;align-items:flex-start;padding:14px 20px;border-bottom:1px solid var(--border)}
+.sun-row:last-child{border-bottom:none}
+.sun-date{width:160px;font-weight:800;color:var(--blue);display:flex;flex-direction:column;gap:4px;flex-shrink:0;padding-top:4px}
+.sun-date .badge{background:var(--blue-l);color:var(--blue);padding:4px 10px;border-radius:7px;font-size:13px;display:inline-block}
+.sun-date .holiday-tag{font-size:10.5px;font-weight:700;color:#c0392b;background:#ffe4e1;padding:2px 7px;border-radius:4px;display:inline-block;margin-top:2px}
+.sun-staff{display:flex;flex-wrap:wrap;gap:8px;flex:1}
+.s-btn{padding:6px 14px;border:1.5px solid var(--border2);border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;background:var(--white);color:var(--text2);transition:all 0.15s;user-select:none}
+.s-btn:hover{border-color:var(--blue-m);background:var(--blue-l);color:var(--blue)}
+.s-btn.active{background:var(--blue);border-color:var(--blue);color:#fff}
+.s-btn.no-edit{cursor:default!important}
+.s-btn.no-edit:hover{border-color:var(--border2)!important;background:var(--white)!important;color:var(--text2)!important}
+.s-btn.no-edit.active:hover{background:var(--blue)!important;border-color:var(--blue)!important;color:#fff!important}
+
+/* ── HOLIDAY REGISTRATION ── */
+/* Card header riêng cho ngày lễ - đêm và ngày */
+.hl-day-block{border-bottom:1px solid #ffe4e1;padding:16px 20px}
+.hl-day-block:last-child{border-bottom:none}
+.hl-day-meta{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:10px}
+.hl-day-date{background:#c0392b;color:#fff;border-radius:10px;padding:6px 14px;font-size:13px;font-weight:800;white-space:nowrap}
+.hl-day-info{flex:1}
+.hl-day-name{font-size:14px;font-weight:800;color:#c0392b}
+.hl-day-time{font-size:12px;color:var(--text2);margin-top:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hl-time-badge{display:inline-flex;align-items:center;gap:4px;background:var(--gold-l);border:1px solid var(--gold-m);border-radius:6px;padding:2px 8px;font-size:11.5px;font-weight:700;color:var(--amber)}
+.hl-mult-badge{display:inline-flex;align-items:center;gap:4px;border-radius:6px;padding:2px 8px;font-size:11.5px;font-weight:800}
+.mult-x1{background:#f0fdf4;border:1px solid #86efac;color:var(--green)}
+.mult-x15{background:#fef7e8;border:1px solid var(--gold-m);color:var(--amber)}
+.mult-x2{background:#fef2f2;border:1px solid #fca5a5;color:var(--red)}
+
+/* Ca sub-section trong ngày lễ */
+.hl-shift-section{margin-top:10px;border:1.5px solid var(--border);border-radius:10px;overflow:hidden}
+.hl-shift-header{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;font-size:12.5px;font-weight:800;gap:10px;flex-wrap:wrap}
+.hl-shift-header.day-shift{background:#fffbeb;border-bottom:1.5px solid #fde68a;color:#b45309}
+.hl-shift-header.night-shift{background:#eef3fb;border-bottom:1.5px solid var(--blue-m);color:var(--blue-d)}
+.hl-shift-info{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hl-shift-count{font-size:11.5px;font-weight:700;color:var(--text3)}
+.hl-shift-count.has-ppl{color:#c0392b}
+.hl-staff-row{display:flex;flex-wrap:wrap;gap:8px;padding:10px 14px}
+.hl-s-btn{padding:6px 16px;border:1.5px solid #fca5a5;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;background:#fff8f8;color:#c0392b;transition:all 0.15s;user-select:none}
+.hl-s-btn:hover{border-color:#c0392b;background:#ffe4e1}
+.hl-s-btn.active{background:#c0392b;border-color:#a93226;color:#fff}
+.hl-s-btn.no-edit{cursor:default!important}
+.hl-s-btn.no-edit:hover{border-color:#fca5a5!important;background:#fff8f8!important;color:#c0392b!important}
+.hl-s-btn.no-edit.active:hover{background:#c0392b!important;border-color:#a93226!important;color:#fff!important}
+
+/* ── STAT ── */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:20px}
+.kpi{background:var(--white);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px 18px;box-shadow:var(--sh);border-top:4px solid var(--blue)}
+.kpi.g{border-top-color:var(--green)}.kpi.a{border-top-color:var(--gold)}.kpi.p{border-top-color:var(--purple)}.kpi.r{border-top-color:var(--red)}
+.kpi-lbl{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:6px}
+.kpi-val{font-size:28px;font-weight:900;font-family:'IBM Plex Mono',monospace;letter-spacing:-1.5px;color:var(--blue)}
+.kpi.g .kpi-val{color:var(--green)}.kpi.a .kpi-val{color:var(--amber)}.kpi.p .kpi-val{color:var(--purple)}.kpi.r .kpi-val{color:var(--red)}
+.kpi-sub{font-size:12px;color:var(--text3);margin-top:3px;font-weight:600}
+.stbl-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh)}
+.stbl-card .head{padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+table.st{width:100%;border-collapse:collapse;font-size:13.5px}
+table.st thead th{background:var(--surface);padding:10px 14px;text-align:left;font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;border-bottom:1.5px solid var(--border);white-space:nowrap}
+table.st tbody td{padding:11px 14px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+table.st tbody tr:last-child td{border-bottom:none}
+table.st tbody tr:hover td{background:var(--blue-l)}
+table.st tfoot td{background:var(--blue-l);font-weight:800;color:var(--blue);border-top:2px solid var(--blue-m);padding:11px 14px}
+.pill{display:inline-flex;padding:2px 9px;border-radius:20px;font-size:11.5px;font-weight:700;margin-right:2px;white-space:nowrap}
+.ptoi{background:var(--blue-l);color:var(--blue)}.pt7{background:var(--amber-l);color:var(--amber)}
+.pcn{background:var(--green-l);color:var(--green)}.ptoicn{background:var(--teal-l);color:var(--teal)}
+.phl{background:#ffe4e1;color:#c0392b}
+.mono{font-family:'IBM Plex Mono',monospace;font-size:13px}
+.big{font-size:16px;font-weight:900;color:var(--green);font-family:'IBM Plex Mono',monospace}
+.formula{background:var(--surface);border:1px solid var(--border2);border-left:4px solid var(--blue);border-radius:var(--r);padding:12px 16px;font-size:12.5px;color:var(--text2);line-height:2;margin-top:14px}
+.formula strong{color:var(--text);font-weight:800}
+
+/* ── ACCOUNTS ── */
+.acc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:20px}
+.acc-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px;box-shadow:var(--sh);display:flex;flex-direction:column;gap:10px}
+.acc-card.admin-card{border-top:4px solid var(--blue)}
+.acc-card.staff-card{border-top:4px solid var(--green)}
+.acc-header{display:flex;align-items:center;gap:10px}
+.acc-avatar{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#fff;flex-shrink:0}
+.acc-avatar.av-admin{background:linear-gradient(135deg,var(--blue),var(--blue-d))}
+.acc-avatar.av-staff{background:linear-gradient(135deg,var(--green),#15803d)}
+.acc-info{flex:1;min-width:0}
+.acc-name{font-size:14px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acc-role{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.acc-role.r-admin{color:var(--blue)}.acc-role.r-staff{color:var(--green)}
+.acc-meta{font-size:12px;color:var(--text3);display:flex;gap:8px;font-weight:600}
+.acc-actions{display:flex;gap:6px;flex-wrap:wrap}
+
+/* ── HOLIDAY MANAGEMENT ── */
+.holiday-list{display:flex;flex-direction:column;gap:10px}
+.holiday-item{display:flex;align-items:flex-start;gap:14px;background:var(--white);border:1.5px solid var(--border);border-radius:var(--r-lg);padding:14px 18px;box-shadow:var(--sh);transition:border-color .15s;flex-wrap:wrap}
+.holiday-item:hover{border-color:var(--blue-m)}
+.holiday-item.has-truc{border-left:4px solid #c0392b}
+.hl-date{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);min-width:120px;padding-top:2px}
+.hl-body{flex:1;min-width:200px}
+.hl-name{font-size:14px;font-weight:800;color:var(--text);margin-bottom:6px}
+.hl-tags{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.hl-tag{display:inline-flex;align-items:center;gap:4px;border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700}
+.hl-tag-time{background:var(--gold-l);border:1px solid var(--gold-m);color:var(--amber)}
+.hl-tag-hours{background:var(--blue-l);border:1px solid var(--blue-m);color:var(--blue)}
+.hl-tag-mult.x1{background:#f0fdf4;border:1px solid #86efac;color:var(--green)}
+.hl-tag-mult.x15{background:var(--gold-l);border:1px solid var(--gold-m);color:var(--amber)}
+.hl-tag-mult.x2{background:var(--red-l);border:1px solid #fca5a5;color:var(--red)}
+.hl-tag-note{background:var(--surface);border:1px solid var(--border);color:var(--text3)}
+.hl-empty{padding:32px;text-align:center;color:var(--text3);font-size:13px;font-weight:600}
+
+/* ── MODAL ── */
+.modal-bg{position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:8000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);animation:fadeIn .2s}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal-bg.hidden{display:none}
+.modal{background:var(--white);border-radius:18px;padding:28px 28px 24px;width:100%;max-width:520px;box-shadow:0 24px 72px rgba(0,0,0,0.2);animation:slideUp .25s cubic-bezier(.16,1,.3,1);max-height:90vh;overflow-y:auto}
+.modal-title{font-size:18px;font-weight:900;color:var(--text);margin-bottom:18px;display:flex;align-items:center;gap:8px}
+.modal-section{border-top:1px solid var(--border);margin-top:16px;padding-top:14px}
+.modal-section-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:10px}
+.modal-field{margin-bottom:14px}
+.modal-field label{display:block;font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:5px}
+.modal-field input,.modal-field select,.modal-field textarea{width:100%;padding:9px 12px;border:1.5px solid var(--border2);border-radius:8px;font-family:inherit;font-size:13.5px;font-weight:600;color:var(--text);background:var(--surface);outline:none;transition:border-color .15s}
+.modal-field input:focus,.modal-field select:focus,.modal-field textarea:focus{border-color:var(--blue)}
+.modal-field textarea{resize:vertical;min-height:70px}
+.modal-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+.mult-selector{display:flex;gap:8px}
+.mult-btn{flex:1;padding:10px 8px;border:2px solid var(--border2);border-radius:10px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;background:var(--surface);color:var(--text2);transition:all .15s;text-align:center}
+.mult-btn:hover{border-color:var(--blue-m);background:var(--blue-l);color:var(--blue)}
+.mult-btn.sel-x1{border-color:var(--green);background:var(--green-l);color:var(--green)}
+.mult-btn.sel-x15{border-color:var(--gold);background:var(--gold-l);color:var(--amber)}
+.mult-btn.sel-x2{border-color:var(--red);background:var(--red-l);color:var(--red)}
+.calc-preview{background:var(--surface);border:1.5px solid var(--border2);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--text2);font-weight:600;margin-top:8px}
+.calc-preview strong{color:var(--blue)}
+
+/* ── STAFF ── */
+.action-btns{display:flex;gap:6px}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#c0cfe0;border-radius:3px}
+
+@media print{
+  .hdr,.tabs,.toolbar,.btn,.action-btns,#loginScreen,#syncStatus,#loadingOverlay{display:none!important}
+  .panel{display:block!important}
+  body{background:#fff}
+}
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loadingOverlay">
+  <div class="load-logo">🔧</div>
+  <div class="load-title">Lịch Trực Đêm</div>
+  <div class="load-msg" id="loadMsg">Đang kết nối...</div>
+  <div class="load-bar"><div class="load-bar-inner"></div></div>
+</div>
+
+<!-- Sync status -->
+<div id="syncStatus">
+  <div class="sync-dot"></div>
+  <span id="syncLabel">Đang đồng bộ...</span>
+</div>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">🔧</div>
+    <div class="login-title">Lịch Trực Đêm</div>
+    <div class="login-sub">Hệ thống quản lý ca trực – Kỹ Thuật</div>
+    <div class="login-connect-badge"><div class="login-connect-dot"></div>Đã kết nối</div>
+    <div class="login-err" id="loginErr">Tên đăng nhập hoặc mật khẩu không đúng!</div>
+    <div class="login-field">
+      <label>Tên đăng nhập</label>
+      <input type="text" id="loginUser" placeholder="Nhập username..." autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="login-field">
+      <label>Mật khẩu</label>
+      <input type="password" id="loginPass" placeholder="Nhập mật khẩu..." autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="login-btn" onclick="doLogin()">Đăng nhập →</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appScreen">
+<div class="hdr">
+  <div class="hdr-brand">
+    <div class="hdr-logo">🔧</div>
+    <div>
+      <div class="hdr-title">Lịch Trực Đêm – Kỹ Thuật</div>
+      <div class="hdr-sub" id="hdrSub">...</div>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <div class="conn-badge"><div class="conn-dot"></div>Đã kết nối</div>
+    <div class="user-badge">
+      <div class="role-dot" id="roleDot"></div>
+      <span id="userBadgeName"></span>
+    </div>
+    <div class="hdr-actions">
+      <button class="hbtn" onclick="exportCSV()">📥 CSV</button>
+      <button class="hbtn" onclick="window.print()">🖨️ In</button>
+      <button class="hbtn logout" onclick="doLogout()">🚪 Đăng xuất</button>
+    </div>
+  </div>
+</div>
+
+<nav class="tabs">
+  <button class="tab active" onclick="switchTab('t1',this)">📅 Lịch Trực</button>
+  <button class="tab" onclick="switchTab('t2',this)">📊 Thống Kê</button>
+  <button class="tab" id="tabHoliday" onclick="switchTab('t5',this)" data-admin-only>🎌 Ngày Nghỉ Lễ</button>
+  <button class="tab" id="tabStaff" onclick="switchTab('t3',this)" data-admin-only>👥 Quản Lý KTV</button>
+  <button class="tab" id="tabAcc" onclick="switchTab('t4',this)" data-admin-only>🔑 Tài Khoản</button>
+</nav>
+
+<div class="main">
+
+<!-- TAB 1: LỊCH TRỰC -->
+<div id="t1" class="panel active">
+  <div id="permBanner1"></div>
+  <div class="card">
+    <div class="card-head">
+      <div class="toolbar">
+        <div class="fld"><label>Tháng</label><select id="sM" onchange="onMonthYearChange()"></select></div>
+        <div class="fld"><label>Năm</label><input type="number" id="sY" value="2026" min="2020" max="2035" onchange="onMonthYearChange()"></div>
+        <div class="fld"><label>Giờ chuẩn/ngày</label><input type="number" id="sS" value="8" min="1" max="24" onchange="renderAll()"></div>
+        <button class="btn btn-red" id="btnClear" onclick="clearMonth()">🗑 Xóa tháng</button>
+      </div>
+    </div>
+    <div style="padding:14px 20px 4px;font-size:15px;font-weight:900;color:var(--text);border-bottom:1px solid var(--border)">🌙 Bảng Trực Ca Tối</div>
+    <div style="padding:10px 20px 0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+      <div style="font-size:12px;color:var(--text3)">Nhấn ô để đánh dấu KTV trực ca tối. Ô 🎌 là ngày lễ – nhấn để đăng ký trực đêm lễ.</div>
+      <div class="legend">
+        <div class="leg"><div class="leg-box" style="background:#e8f0fc;border:1.5px solid var(--blue)"></div>Tối T2–T6 (4,5h)</div>
+        <div class="leg"><div class="leg-box" style="background:#fef9c3;border:1.5px solid var(--amber)"></div>Tối T7 (6h)</div>
+        <div class="leg"><div class="leg-box" style="background:var(--teal-l);border:1.5px solid var(--teal)"></div>Tối CN (4,5h)</div>
+        <div class="leg"><div class="leg-box" style="background:#ffd6d6;border:1.5px solid #c0392b"></div>🎌 Ngày lễ (click để trực đêm lễ)</div>
+      </div>
+    </div>
+    <div style="padding:10px 0 16px"><div class="matrix-wrap" id="mxWrap"></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head" style="background:var(--green-l);border-bottom-color:var(--green-m)">
+      <div style="font-size:15px;font-weight:900;color:var(--green)">☀️ Danh Sách Trực Ngày Chủ Nhật (+1 Công chuẩn)</div>
+      <div style="font-size:12px;color:var(--text2)">Nhấn vào tên KTV để đăng ký ca Ngày CN.</div>
+    </div>
+    <div id="sunWrap"></div>
+  </div>
+
+  <!-- Holiday Registration Section -->
+  <div class="card" id="hlRegCard" style="display:none">
+    <div style="padding:14px 20px;background:linear-gradient(90deg,#c0392b,#e74c3c);border-radius:13px 13px 0 0">
+      <div style="font-size:15px;font-weight:900;color:#fff">🎌 Đăng Ký Trực Ngày Nghỉ Lễ</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.85);margin-top:3px">
+        ☀️ <strong>Trực ngày</strong> (07:30–17:30): tính công 8h × hệ số &nbsp;|&nbsp;
+        🌙 <strong>Trực đêm</strong> (17:30–22:00): tính 4,5h × hệ số
+      </div>
+    </div>
+    <div id="hlRegWrap"></div>
+  </div>
+</div>
+
+<!-- TAB 2: THỐNG KÊ -->
+<div id="t2" class="panel">
+  <div class="card">
+    <div class="card-head">
+      <div class="toolbar">
+        <div class="fld"><label>Tháng</label><select id="sM2" onchange="renderStat()"></select></div>
+        <div class="fld"><label>Năm</label><input type="number" id="sY2" value="2026" min="2020" max="2035" onchange="renderStat()"></div>
+        <div class="fld"><label>Giờ chuẩn/ngày</label><input type="number" id="sS2" value="8" min="1" max="24" onchange="renderStat()"></div>
+        <button class="btn btn-green" onclick="exportCSV()">📥 Xuất CSV</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="kpi-row" id="kpiRow"></div>
+      <div class="stbl-card">
+        <div class="head"><strong style="font-size:15px" id="statTitle">Bảng công</strong><span style="font-size:11px;color:var(--text3);font-weight:700">8h = 1 ngày công</span></div>
+        <div style="overflow-x:auto">
+          <table class="st">
+            <thead><tr><th>#</th><th>Họ và tên</th><th>Tối T2–T6</th><th>Tối T7</th><th>Ngày CN</th><th>Tối CN</th><th>Lễ ngày</th><th>Lễ đêm</th><th>Tổng ca</th><th>Tổng giờ</th><th>Ngày công</th></tr></thead>
+            <tbody id="stBody"></tbody>
+            <tfoot id="stFoot"></tfoot>
+          </table>
+        </div>
+      </div>
+      <div class="formula" id="fBox"></div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 3: QUẢN LÝ KTV -->
+<div id="t3" class="panel">
+  <div class="card">
+    <div class="card-head">
+      <div class="toolbar" style="width:100%">
+        <div class="fld" style="flex:1;max-width:300px">
+          <label>Tên Kỹ Thuật Viên Mới</label>
+          <input type="text" id="newStaffName" placeholder="Nhập họ và tên..." style="width:100%;max-width:100%" onkeydown="if(event.key==='Enter')addStaff()">
+        </div>
+        <button class="btn btn-green" onclick="addStaff()">➕ Thêm KTV</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="stbl-card" style="max-width:600px">
+        <table class="st">
+          <thead><tr><th style="width:50px">STT</th><th>Họ và tên</th><th style="text-align:right">Thao tác</th></tr></thead>
+          <tbody id="staffTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 4: TÀI KHOẢN -->
+<div id="t4" class="panel">
+  <div class="card">
+    <div class="card-head">
+      <div style="font-size:15px;font-weight:900;color:var(--text)">🔑 Quản Lý Tài Khoản</div>
+      <button class="btn btn-primary" onclick="openAddAccount()">➕ Thêm tài khoản</button>
+    </div>
+    <div class="card-body">
+      <div class="acc-grid" id="accGrid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 5: NGÀY NGHỈ LỄ CÔNG TY -->
+<div id="t5" class="panel">
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <div style="font-size:15px;font-weight:900;color:var(--text)">🎌 Lịch Nghỉ Lễ Công Ty</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:3px">Thiết lập ngày nghỉ lễ và hệ số lương. Mỗi ngày có thể đăng ký trực ngày (8h) và/hoặc trực đêm (4,5h).</div>
+      </div>
+      <button class="btn btn-primary" onclick="openAddHoliday()">➕ Thêm ngày nghỉ</button>
+    </div>
+    <div class="card-body">
+      <div class="toolbar" style="margin-bottom:16px">
+        <div class="fld"><label>Lọc năm</label>
+          <select id="hlYear" onchange="renderHolidays()">
+            <option value="0">-- Tất cả --</option>
+          </select>
+        </div>
+      </div>
+      <div class="holiday-list" id="holidayList"></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+</div><!-- /appScreen -->
+
+<!-- Modal Add/Edit Account -->
+<div class="modal-bg hidden" id="modalAcc">
+  <div class="modal">
+    <div class="modal-title" id="modalAccTitle">➕ Thêm Tài Khoản</div>
+    <div class="modal-field"><label>Họ và tên hiển thị</label><input type="text" id="mAccName" placeholder="Nguyễn Văn A..."></div>
+    <div class="modal-field"><label>Tên đăng nhập</label><input type="text" id="mAccUser" placeholder="nguyenvana"></div>
+    <div class="modal-field"><label>Mật khẩu</label><input type="password" id="mAccPass" placeholder="••••••••"></div>
+    <div class="modal-field" id="mAccRoleField">
+      <label>Vai trò</label>
+      <select id="mAccRole" onchange="updateRoleUI()">
+        <option value="staff">👤 Nhân viên (KTV)</option>
+        <option value="admin">🔑 Admin</option>
+      </select>
+    </div>
+    <div class="modal-field" id="mAccStaffField">
+      <label>Liên kết với KTV</label>
+      <select id="mAccStaff"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modalAcc')">Hủy</button>
+      <button class="btn btn-primary" onclick="saveAccount()">💾 Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Change Password -->
+<div class="modal-bg hidden" id="modalPwd">
+  <div class="modal">
+    <div class="modal-title">🔒 Đổi Mật Khẩu</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px">Tài khoản: <strong id="pwdTarget"></strong></div>
+    <div class="modal-field"><label>Mật khẩu mới</label><input type="password" id="newPwd1" placeholder="••••••••"></div>
+    <div class="modal-field"><label>Xác nhận mật khẩu</label><input type="password" id="newPwd2" placeholder="••••••••" onkeydown="if(event.key==='Enter')savePwd()"></div>
+    <div class="login-err" id="pwdErr" style="margin-top:8px">Mật khẩu không khớp!</div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modalPwd')">Hủy</button>
+      <button class="btn btn-primary" onclick="savePwd()">💾 Cập nhật</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Add/Edit Holiday -->
+<div class="modal-bg hidden" id="modalHoliday">
+  <div class="modal">
+    <div class="modal-title" id="modalHolidayTitle">🎌 Thêm Ngày Nghỉ Lễ</div>
+
+    <div class="modal-row">
+      <div class="modal-field">
+        <label>Ngày bắt đầu</label>
+        <input type="date" id="hlStartDate" oninput="updateHlPreview()">
+      </div>
+      <div class="modal-field">
+        <label>Ngày kết thúc <span style="color:var(--text3);font-weight:600">(bỏ trống = 1 ngày)</span></label>
+        <input type="date" id="hlEndDate" oninput="updateHlPreview()">
+      </div>
+    </div>
+    <div class="modal-field">
+      <label>Tên / Mô tả ngày lễ</label>
+      <input type="text" id="hlName" placeholder="VD: Nghỉ lễ Quốc Khánh...">
+    </div>
+    <div class="modal-row">
+      <div class="modal-field">
+        <label>Màu hiển thị</label>
+        <select id="hlColor">
+          <option value="red">🔴 Đỏ – Nghỉ lễ chính</option>
+          <option value="orange">🟠 Cam – Bù/Thay thế</option>
+          <option value="purple">🟣 Tím – Đặc biệt</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="modal-section">
+      <div class="modal-section-title">⚙️ Hệ số lương ngày lễ (áp dụng cho cả trực ngày & đêm)</div>
+
+      <!-- Hệ số lương -->
+      <div class="modal-field">
+        <label>💰 Hệ số lương</label>
+        <div class="mult-selector">
+          <button type="button" class="mult-btn" id="mBtn1" onclick="selectMult('1')">
+            ×1<br><span style="font-size:10px;font-weight:600">Lương bình thường</span>
+          </button>
+          <button type="button" class="mult-btn" id="mBtn15" onclick="selectMult('1.5')">
+            ×1.5<br><span style="font-size:10px;font-weight:600">Tăng 50%</span>
+          </button>
+          <button type="button" class="mult-btn" id="mBtn2" onclick="selectMult('2')">
+            ×2<br><span style="font-size:10px;font-weight:600">Tăng gấp đôi</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Số giờ tính 1 công -->
+      <div class="modal-field">
+        <label>📋 Quy đổi công <span style="color:var(--text3);font-weight:600">(số giờ = 1 ngày công)</span></label>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="number" id="hlStdHours" value="8" min="1" max="24" style="width:80px" oninput="updateHlPreview()">
+          <span style="font-size:13px;color:var(--text2);font-weight:600">giờ = 1 ngày công</span>
+        </div>
+      </div>
+
+      <div class="calc-preview" id="hlCalcPreview"></div>
+    </div>
+
+    <div class="modal-field" style="margin-top:14px">
+      <label>Ghi chú</label>
+      <textarea id="hlNote" placeholder="Nội dung thêm (không bắt buộc)..."></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modalHoliday')">Hủy</button>
+      <button class="btn btn-primary" onclick="saveHoliday()">💾 Lưu</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+const DOW_LBL=['CN','T2','T3','T4','T5','T6','T7'];
+const MN=['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
+
+window._staff = [];
+window._accounts = [];
+window._att = {};       // ca tối thông thường + ca tối lễ (bảng ma trận)
+window._attDay = {};    // trực ngày CN
+window._holidays = [];
+window._hlReg = {};     // trực ĐÊM lễ (4.5h × hệ số) — chọn trong bảng đăng ký
+window._hlDayReg = {};  // trực NGÀY lễ (8h × hệ số) — chọn trong bảng đăng ký
+window._firebaseReady = false;
+
+let currentUser = null;
+let editAccId = null, pwdAccId = null, editHolidayId = null;
+let _selectedMult = '1.5';
+
+// ── Sync status ──────────────────────────────────────────────
+let _syncTimer = null;
+function showSyncStatus(state) {
+  const el = document.getElementById('syncStatus');
+  const lbl = document.getElementById('syncLabel');
+  el.className = 'show ' + state;
+  const msgs = {checking:'Kiểm tra...', saving:'Đang lưu...', online:'Đã đồng bộ', error:'Lỗi kết nối!'};
+  lbl.textContent = msgs[state] || '';
+  if (_syncTimer) clearTimeout(_syncTimer);
+  if (state === 'online') _syncTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+window._onFirebaseReady = function() {
+  document.getElementById('loadMsg').textContent = 'Sẵn sàng!';
+  setTimeout(() => {
+    document.getElementById('loadingOverlay').classList.add('hidden');
+    document.getElementById('loginScreen').classList.add('active');
+  }, 450);
+};
+
+// ============================================================
+// PERMISSION HELPERS
+// ============================================================
+function isAdmin(){return currentUser&&currentUser.role==='admin'}
+function myStaffLink(){return currentUser?currentUser.staffLink:null}
+function todayInfo(){const t=new Date();return{todayY:t.getFullYear(),todayM:t.getMonth()+1,todayD:t.getDate()}}
+function isPastDay(m,y,d){const{todayY,todayM,todayD}=todayInfo();if(y<todayY)return true;if(y===todayY&&m<todayM)return true;if(y===todayY&&m===todayM&&d<todayD)return true;return false}
+function isTodayDay(m,y,d){const{todayY,todayM,todayD}=todayInfo();return y===todayY&&m===todayM&&d===todayD}
+
+function canEditMonth(m,y){
+  if(isAdmin())return true;
+  const today=new Date();
+  const todayM=today.getMonth()+1, todayY=today.getFullYear(), todayD=today.getDate();
+  if(y<todayY||(y===todayY&&m<todayM)) return false;
+  if(y===todayY&&m===todayM) return true;
+  const nextM=todayM===12?1:todayM+1;
+  const nextY=todayM===12?todayY+1:todayY;
+  if(y===nextY&&m===nextM){
+    const daysInCurMonth=new Date(todayY,todayM,0).getDate();
+    return todayD >= daysInCurMonth - 6;
+  }
+  return false;
+}
+
+function canEditCell(n,m,y,d){if(isPastDay(m,y,d))return false;if(isAdmin())return true;if(!canEditMonth(m,y))return false;return n===myStaffLink()}
+function canEditSunDay(n,m,y,d){if(isPastDay(m,y,d))return false;if(isAdmin())return true;if(!canEditMonth(m,y))return false;return n===myStaffLink()}
+function canEditHlReg(n,m,y,d){if(isPastDay(m,y,d))return false;if(isAdmin())return true;if(!canEditMonth(m,y))return false;return n===myStaffLink()}
+
+function getPermBannerHtml(m,y){
+  if(isAdmin())return '';
+  if(!canEditMonth(m,y)){
+    const today=new Date();const todayM=today.getMonth()+1,todayY=today.getFullYear(),todayD=today.getDate();
+    if(y<todayY||(y===todayY&&m<todayM))return`<div class="perm-banner locked">🔒 Tháng ${m}/${y} đã qua – Chỉ xem.</div>`;
+    const last=new Date(todayY,todayM,0).getDate();
+    const openDay=last-6;
+    return`<div class="perm-banner warn">⏳ Đăng ký tháng ${m}/${y} mở từ ngày <strong>${openDay}/${todayM}/${todayY}</strong> (7 ngày cuối tháng).</div>`;
+  }
+  return`<div class="perm-banner ok">✅ Đăng ký ca trực cho bản thân: <strong>${myStaffLink()||'—'}</strong></div>`;
+}
+
+// ── Holiday helpers ──────────────────────────────────────────
+function getHolidayForDate(y,m,d){
+  const ds=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  return window._holidays.find(h=>{
+    if(!h.endDate||h.endDate===''||h.endDate===h.startDate) return h.startDate===ds;
+    return ds>=h.startDate&&ds<=h.endDate;
+  })||null;
+}
+
+function getHolidayTrucDatesInMonth(m,y){
+  const days=daysIn(y,m);
+  const result=[];
+  for(let d=1;d<=days;d++){
+    const h=getHolidayForDate(y,m,d);
+    if(h){
+      const ds=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      result.push({d,ds,dw:dowOf(y,m,d),h});
+    }
+  }
+  return result;
+}
+
+// ── Trực đêm lễ: lấy từ _hlReg (4.5h × hệ số) ──
+function getHlNightRegForDate(m,y,ds){
+  const k=m+'_'+y;
+  return (window._hlReg[k]&&window._hlReg[k][ds]) ? window._hlReg[k][ds] : [];
+}
+function isHlNightReg(m,y,ds,n){ return getHlNightRegForDate(m,y,ds).includes(n); }
+
+function toggleHlNightReg(n,ds){
+  const m=gM(),y=gY();
+  const d=parseInt(ds.split('-')[2]);
+  if(!canEditHlReg(n,m,y,d)) return;
+  const k=m+'_'+y;
+  if(!window._hlReg[k]) window._hlReg[k]={};
+  const arr=window._hlReg[k][ds]||[];
+  const idx=arr.indexOf(n);
+  if(idx>=0) arr.splice(idx,1); else arr.push(n);
+  window._hlReg[k][ds]=arr;
+  if(window._saveHlReg) window._saveHlReg(m,y);
+  renderHlReg();
+}
+
+// ── Trực ngày lễ: lấy từ _hlDayReg (8h × hệ số) ──
+function getHlDayRegForDate(m,y,ds){
+  const k=m+'_'+y;
+  return (window._hlDayReg[k]&&window._hlDayReg[k][ds]) ? window._hlDayReg[k][ds] : [];
+}
+function isHlDayReg(m,y,ds,n){ return getHlDayRegForDate(m,y,ds).includes(n); }
+
+function toggleHlDayReg(n,ds){
+  const m=gM(),y=gY();
+  const d=parseInt(ds.split('-')[2]);
+  if(!canEditHlReg(n,m,y,d)) return;
+  const k=m+'_'+y;
+  if(!window._hlDayReg[k]) window._hlDayReg[k]={};
+  const arr=window._hlDayReg[k][ds]||[];
+  const idx=arr.indexOf(n);
+  if(idx>=0) arr.splice(idx,1); else arr.push(n);
+  window._hlDayReg[k][ds]=arr;
+  if(window._saveHlDayReg) window._saveHlDayReg(m,y);
+  renderHlReg();
+}
+
+// ============================================================
+// LOGIN
+// ============================================================
+function doLogin(){
+  const u=document.getElementById('loginUser').value.trim();
+  const p=document.getElementById('loginPass').value;
+  const acc=window._accounts.find(a=>a.username===u&&a.password===p);
+  if(!acc){document.getElementById('loginErr').classList.add('show');return}
+  document.getElementById('loginErr').classList.remove('show');
+  currentUser={...acc};
+  document.getElementById('loginScreen').classList.add('fade-out');
+  setTimeout(()=>{
+    document.getElementById('loginScreen').classList.remove('active','fade-out');
+    document.getElementById('appScreen').classList.add('visible');
+    initApp();
+  },350);
+}
+
+function doLogout(){
+  currentUser=null;
+  document.getElementById('appScreen').classList.remove('visible');
+  document.getElementById('loginScreen').classList.add('active');
+  document.getElementById('loginUser').value='';
+  document.getElementById('loginPass').value='';
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('t1').classList.add('active');
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.tab').classList.add('active');
+}
+
+function initApp(){
+  document.getElementById('userBadgeName').textContent=currentUser.name+(currentUser.role==='admin'?' (Admin)':'');
+  document.getElementById('roleDot').className='role-dot'+(currentUser.role==='admin'?' admin':'');
+  document.querySelectorAll('[data-admin-only]').forEach(t=>{
+    if(isAdmin())t.classList.add('show');else t.classList.remove('show');
+  });
+  document.getElementById('btnClear').style.display=isAdmin()?'':'none';
+  const now=new Date(),cm=now.getMonth()+1,cy=now.getFullYear();
+  fillSel('sM',cm);fillSel('sM2',cm);
+  document.getElementById('sY').value=cy;document.getElementById('sY2').value=cy;
+  if(window._startRealtimeListeners) window._startRealtimeListeners(cm,cy,()=>renderAll());
+  renderAll();
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function gStd(){return Math.max(1,+document.getElementById('sS').value||8)}
+function gStd2(){return Math.max(1,+document.getElementById('sS2').value||8)}
+function gM(){return +document.getElementById('sM').value}
+function gY(){return +document.getElementById('sY').value}
+function gM2(){return +document.getElementById('sM2').value}
+function gY2(){return +document.getElementById('sY2').value}
+function daysIn(y,m){return new Date(y,m,0).getDate()}
+function dowOf(y,m,d){return new Date(y,m-1,d).getDay()}
+function mk(m,y){return m+'_'+y}
+function fillSel(id,curM){
+  const el=document.getElementById(id);el.innerHTML='';
+  MN.forEach((mn,i)=>{const o=document.createElement('option');o.value=i+1;o.textContent=mn;if(i+1===curM)o.selected=true;el.appendChild(o)});
+}
+function onMonthYearChange(){
+  const m=gM(),y=gY();
+  if(window._startRealtimeListeners) window._startRealtimeListeners(m,y,()=>renderAll());
+  renderAll();
+}
+
+// Ca tối thông thường (bảng matrix)
+function getC(m,y,n,d){const k=mk(m,y);return window._att[k]&&window._att[k][n]?window._att[k][n][d]||null:null}
+function setC(m,y,n,d,v){
+  const k=mk(m,y);
+  if(!window._att[k])window._att[k]={};
+  if(!window._att[k][n])window._att[k][n]={};
+  if(v)window._att[k][n][d]=v;else delete window._att[k][n][d];
+  if(window._saveAtt)window._saveAtt(m,y);
+}
+
+// Trực ngày CN
+function getCDay(m,y,n,d){const k=mk(m,y);return window._attDay[k]&&window._attDay[k][n]?window._attDay[k][n][d]||false:false}
+function toggleSunDay(n,d){
+  if(!canEditSunDay(n,gM(),gY(),d))return;
+  const m=gM(),y=gY(),k=mk(m,y);
+  if(!window._attDay[k])window._attDay[k]={};
+  if(!window._attDay[k][n])window._attDay[k][n]={};
+  if(window._attDay[k][n][d])delete window._attDay[k][n][d];else window._attDay[k][n][d]=true;
+  if(window._saveAttDay)window._saveAttDay(m,y);
+  renderSunList();
+}
+
+// ============================================================
+// TÍNH CÔNG — tách riêng trực ngày lễ và trực đêm lễ
+// ============================================================
+function calcP(n,m,y,std){
+  const days=daysIn(y,m);
+  let h=0, nT=0, n7=0, nC=0, nTC=0;
+  let nHLNight=0, hlNightH=0, hlNightCong=0;  // trực đêm lễ (4.5h × hệ số)
+  let nHLDay=0, hlDayH=0, hlDayCong=0;        // trực ngày lễ (8h × hệ số)
+
+  // Ca tối thông thường (không phải ngày lễ)
+  for(let d=1;d<=days;d++){
+    const hl=getHolidayForDate(y,m,d);
+    const t=getC(m,y,n,d);
+    if(t && !hl){
+      // Ngày thường
+      h += t==='toi'?4.5:t==='t7'?6:4.5;
+      if(t==='toi')nT++;
+      else if(t==='t7')n7++;
+      else if(t==='toicn')nTC++;
+    }
+    if(getCDay(m,y,n,d)){nC++;h+=std}
+  }
+
+  // Ngày lễ: trực đêm và trực ngày tách riêng
+  const hlDates=getHolidayTrucDatesInMonth(m,y);
+  hlDates.forEach(({d,ds,h:hl})=>{
+    const mult=parseFloat(hl.mult||'1.5');
+    const stdH=parseFloat(hl.stdHours||'8');
+
+    // Trực đêm lễ: 4.5h × hệ số (đăng ký riêng, không liên quan bảng matrix)
+    if(isHlNightReg(m,y,ds,n)){
+      nHLNight++;
+      const effH=4.5*mult;
+      hlNightH+=4.5;
+      hlNightCong+=effH/stdH;
+      h+=effH;
+    }
+
+    // Trực ngày lễ: 8h × hệ số
+    if(isHlDayReg(m,y,ds,n)){
+      nHLDay++;
+      const effH=8*mult;
+      hlDayH+=8;
+      hlDayCong+=effH/stdH;
+      h+=effH;
+    }
+  });
+
+  const cong=h/std;
+  const nHL=nHLNight+nHLDay;
+  return{h,nT,n7,nC,nTC,nHLNight,nHLDay,nHL,hlNightH,hlDayH,hlNightCong,hlDayCong,tot:nT+n7+nC+nTC+nHL,cong};
+}
+
+// ============================================================
+// TAB SWITCH
+// ============================================================
+function switchTab(id,btn){
+  if((id==='t3'||id==='t4'||id==='t5')&&!isAdmin())return;
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');btn.classList.add('active');
+  if(id==='t1')renderAll();
+  if(id==='t2'){document.getElementById('sM2').value=gM();document.getElementById('sY2').value=gY();document.getElementById('sS2').value=gStd();renderStat()}
+  if(id==='t3')renderStaff();
+  if(id==='t4')renderAccounts();
+  if(id==='t5')renderHolidays();
+}
+
+// ============================================================
+// TOGGLE CA TỐI (bảng matrix) — chỉ cho ngày thường
+// Ngày lễ: chỉ toggle trong bảng đăng ký riêng
+// ============================================================
+function toggle(n,d,dw){
+  if(!canEditCell(n,gM(),gY(),d))return;
+  const m=gM(),y=gY();
+  const hl=getHolidayForDate(y,m,d);
+  // Nếu là ngày lễ → toggle trực đêm lễ thay vì ghi vào matrix
+  if(hl){
+    const ds=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    toggleHlNightReg(n,ds);
+    patchCell(n,d,dw,getC(m,y,n,d),m,y); // cập nhật ô
+    return;
+  }
+  const cur=getC(m,y,n,d);
+  let next;
+  if(dw===0)next=cur==='toicn'?null:'toicn';
+  else if(dw===6)next=cur==='t7'?null:'t7';
+  else next=cur==='toi'?null:'toi';
+  setC(m,y,n,d,next);
+  patchCell(n,d,dw,next,m,y);
+  patchCntRow(m,y);
+}
+
+function cellId(n,d){return 'cell__'+n.replace(/[^a-zA-Z0-9]/g,'_')+'__'+d}
+function cntId(d){return 'cnt__'+d}
+
+function patchCell(n,d,dw,type,m,y){
+  const el=document.getElementById(cellId(n,d));if(!el)return;
+  const hl=getHolidayForDate(y,m,d);
+  const ds=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  const isNightHl=hl&&isHlNightReg(m,y,ds,n);
+  el.className='dc';
+  if(dw===0)el.classList.add('vcn');if(dw===6)el.classList.add('vt7');
+  if(hl)el.classList.add('c-holiday-truc');
+  if(!hl){
+    if(type==='toi')el.classList.add('c-toi');
+    else if(type==='t7')el.classList.add('c-t7');
+    else if(type==='toicn')el.classList.add('c-toicn');
+    else el.classList.add('off');
+  }
+  if(isPastDay(m,y,d)){el.classList.add('past');el.classList.add('no-edit')}
+  else if(isTodayDay(m,y,d))el.classList.add('today-col');
+  if(!canEditCell(n,m,y,d))el.classList.add('no-edit');
+  let inner='';
+  if(hl){
+    if(isNightHl) inner=`<div class="chk toicn" style="font-size:10px">🌙✓</div>`;
+    else inner=`<div class="chk hl">🎌</div>`;
+  } else if(type){
+    inner=`<div class="chk ${type}">✓</div>`;
+  }
+  el.innerHTML=inner;
+}
+
+function patchCntRow(m,y){
+  const days=daysIn(y,m);
+  for(let d=1;d<=days;d++){
+    const el=document.getElementById(cntId(d));if(!el)continue;
+    let cnt=0;window._staff.forEach(n=>{if(getC(m,y,n,d))cnt++});
+    el.textContent=cnt>0?cnt:'';
+    el.className=cnt>=window._staff.length?'full':cnt>0?'has':'';
+  }
+}
+
+// ============================================================
+// RENDER MATRIX
+// ============================================================
+function renderMatrix(){
+  const m=gM(),y=gY();
+  const days=daysIn(y,m);
+  document.getElementById('hdrSub').textContent=`Tháng ${m}/${y}`;
+  const dates=[];for(let d=1;d<=days;d++)dates.push({d,dw:dowOf(y,m,d)});
+
+  let h='<div style="overflow-x:auto"><table class="mx"><thead>';
+  h+=`<tr class="mx-r1"><th class="col-name th-nm">Họ và tên</th>`;
+  dates.forEach(({d,dw})=>{
+    const hl=getHolidayForDate(y,m,d);
+    const todayCls=isTodayDay(m,y,d)?' today-th':'';
+    const hlCls=hl?' holiday-th':'';
+    const dowCls=dw===0?' dcn2':dw===6?' dt72':'';
+    const pastStyle=isPastDay(m,y,d)?'opacity:.5':'';
+    h+=`<th class="col-d${dowCls}${todayCls}${hlCls}" style="${pastStyle}" title="${hl?hl.name:''}">${d}</th>`;
+  });
+  h+='</tr><tr class="mx-r2">';
+  h+=`<th class="th-nm2 col-name" style="text-align:left;padding-left:14px;font-size:10px;color:rgba(255,255,255,0.6)">17:30–22:00 / 16:00–22:00(T7) | 🎌=click đăng ký đêm lễ</th>`;
+  dates.forEach(({d,dw})=>{
+    const dowCls=dw===0?' dcn':dw===6?' dt7':'';
+    const hl=getHolidayForDate(y,m,d);
+    const pastStyle=isPastDay(m,y,d)?'opacity:.5':'';
+    h+=`<th class="col-d${dowCls}${hl?' dhl':''}" style="${pastStyle}">${hl?'🎌':DOW_LBL[dw]}</th>`;
+  });
+  h+='</tr></thead><tbody class="rows">';
+
+  window._staff.forEach(n=>{
+    h+=`<tr><td class="nm">${n}</td>`;
+    dates.forEach(({d,dw})=>{
+      const hl=getHolidayForDate(y,m,d);
+      const ds=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const type=!hl?getC(m,y,n,d):null;
+      const isNightHl=hl&&isHlNightReg(m,y,ds,n);
+      const editable=canEditCell(n,m,y,d);
+      const past=isPastDay(m,y,d);
+      const today=isTodayDay(m,y,d);
+      let cls='dc';
+      if(dw===0)cls+=' vcn';if(dw===6)cls+=' vt7';
+      if(hl)cls+=' c-holiday-truc';
+      if(!hl){
+        if(type==='toi')cls+=' c-toi';else if(type==='t7')cls+=' c-t7';else if(type==='toicn')cls+=' c-toicn';
+        else cls+=' off';
+      }
+      if(past)cls+=' past no-edit';else if(today)cls+=' today-col';
+      if(!editable)cls+=' no-edit';
+      let inner='';
+      if(hl){
+        if(isNightHl) inner=`<div class="chk toicn" style="font-size:10px">🌙✓</div>`;
+        else inner=`<div class="chk hl" title="${hl.name}">🎌</div>`;
+      } else if(type){
+        inner=`<div class="chk ${type}">✓</div>`;
+      }
+      const esc=n.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      const onclick=editable&&!past?`onclick="toggle('${esc}',${d},${dw})"`:'';
+      h+=`<td id="${cellId(n,d)}" class="${cls}" ${onclick}>${inner}</td>`;
+    });
+    h+='</tr>';
+  });
+  h+='</tbody><tbody><tr class="cnt-row">';
+  h+=`<td class="nm col-name" style="font-weight:800;color:var(--text3)">Số người trực tối</td>`;
+  dates.forEach(({d})=>{
+    let cnt=0;window._staff.forEach(n=>{if(getC(m,y,n,d))cnt++});
+    const cls=cnt>=window._staff.length?'full':cnt>0?'has':'';
+    h+=`<td id="${cntId(d)}" class="${cls}">${cnt>0?cnt:''}</td>`;
+  });
+  h+='</tr></tbody></table></div>';
+  document.getElementById('mxWrap').innerHTML=h;
+}
+
+// ============================================================
+// RENDER SUN LIST
+// ============================================================
+function renderSunList(){
+  const m=gM(),y=gY();
+  const days=daysIn(y,m);let html='',countSun=0;
+  for(let d=1;d<=days;d++){
+    if(dowOf(y,m,d)===0){
+      countSun++;
+      const past=isPastDay(m,y,d);
+      const today=isTodayDay(m,y,d);
+      const hl=getHolidayForDate(y,m,d);
+      const rowCls=today?'today-sun':'';
+      const pastLabel=past?`<span style="font-size:10px;color:var(--text3);font-weight:600">(đã qua)</span>`:'';
+      const todayLabel=today?`<span style="font-size:10px;color:var(--gold);font-weight:800">● Hôm nay</span>`:'';
+      html+=`<div class="sun-row ${rowCls}" style="${past?'opacity:.55':''}">
+        <div class="sun-date">
+          <span class="badge">CN, ${d}/${m}</span>
+          ${todayLabel}${pastLabel}
+          ${hl?`<span class="holiday-tag">🎌 ${hl.name}</span>`:''}
+        </div>
+        <div class="sun-staff">`;
+      window._staff.forEach(n=>{
+        const isDay=getCDay(m,y,n,d);
+        const editable=canEditSunDay(n,m,y,d);
+        const esc=n.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+        const onclick=editable?`onclick="toggleSunDay('${esc}',${d})"`:'';
+        html+=`<button class="s-btn ${isDay?'active':''} ${editable?'':'no-edit'}" ${onclick}>${n}</button>`;
+      });
+      html+=`</div></div>`;
+    }
+  }
+  if(!countSun)html=`<div style="padding:20px;color:var(--text3);font-style:italic">Không có ngày Chủ Nhật trong tháng này.</div>`;
+  document.getElementById('sunWrap').innerHTML=html;
+}
+
+// ============================================================
+// RENDER HOLIDAY REGISTRATION
+// ── Tách 2 ca: Trực ngày (8h) + Trực đêm (4.5h), mỗi ca chọn người riêng
+// ============================================================
+function renderHlReg(){
+  const m=gM(),y=gY();
+  const hlDates=getHolidayTrucDatesInMonth(m,y);
+  const card=document.getElementById('hlRegCard');
+
+  if(!hlDates.length){card.style.display='none';return;}
+  card.style.display='';
+
+  const multLabel={'1':'×1','1.5':'×1.5','2':'×2'};
+  const multCls={'1':'mult-x1','1.5':'mult-x15','2':'mult-x2'};
+
+  let html='';
+  hlDates.forEach(({d,ds,dw,h:hl})=>{
+    const past=isPastDay(m,y,d);
+    const mult=hl.mult||'1.5';
+    const stdH=parseFloat(hl.stdHours||'8');
+    const multVal=parseFloat(mult);
+
+    // Tính công trực ngày: 8h × hệ số
+    const dayEffH=(8*multVal).toFixed(1);
+    const dayCong=(8*multVal/stdH).toFixed(2);
+    // Tính công trực đêm: 4.5h × hệ số
+    const nightEffH=(4.5*multVal).toFixed(1);
+    const nightCong=(4.5*multVal/stdH).toFixed(2);
+
+    const registeredNight=getHlNightRegForDate(m,y,ds);
+    const registeredDay=getHlDayRegForDate(m,y,ds);
+
+    html+=`<div class="hl-day-block" style="${past?'opacity:.55':''}">
+      <div class="hl-day-meta">
+        <div class="hl-day-date">${DOW_LBL[dw]}, ${d}/${m}/${y}</div>
+        <div class="hl-day-info">
+          <div class="hl-day-name">🎌 ${hl.name}</div>
+          <div class="hl-day-time">
+            <span class="hl-mult-badge ${multCls[mult]||'mult-x15'}">💰 Hệ số ${multLabel[mult]||'×'+mult}</span>
+            <span style="font-size:12px;color:var(--text2);font-weight:600">Quy đổi: ${stdH}h = 1 công</span>
+          </div>
+        </div>
+      </div>`;
+
+    // ── CA TRỰC NGÀY ──
+    html+=`<div class="hl-shift-section">
+      <div class="hl-shift-header day-shift">
+        <div class="hl-shift-info">
+          <span>☀️ Trực ngày &nbsp;07:30 – 16:30</span>
+          <span class="hl-time-badge">8h × ${mult} = ${dayEffH}h = <strong>${dayCong} công</strong></span>
+        </div>
+        <span class="hl-shift-count ${registeredDay.length?'has-ppl':''}">
+          ${registeredDay.length?`👥 ${registeredDay.length} người`:'Chưa có đăng ký'}
+        </span>
+      </div>
+      <div class="hl-staff-row">`;
+    window._staff.forEach(n=>{
+      const isReg=registeredDay.includes(n);
+      const editable=canEditHlReg(n,m,y,d)&&!past;
+      const esc=n.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      const escd=ds.replace(/'/g,"\\'");
+      const onclick=editable?`onclick="toggleHlDayReg('${esc}','${escd}')"`:'';
+      html+=`<button class="hl-s-btn ${isReg?'active':''} ${editable?'':'no-edit'}" ${onclick}>${n}${isReg?' ✓':''}</button>`;
+    });
+    html+=`</div></div>`;
+
+    // ── CA TRỰC ĐÊM ──
+    html+=`<div class="hl-shift-section" style="margin-top:8px">
+      <div class="hl-shift-header night-shift">
+        <div class="hl-shift-info">
+          <span>🌙 Trực đêm &nbsp;17:30 – 22:00</span>
+          <span class="hl-time-badge" style="background:var(--blue-l);border-color:var(--blue-m);color:var(--blue)">4,5h × ${mult} = ${nightEffH}h = <strong>${nightCong} công</strong></span>
+        </div>
+        <span class="hl-shift-count ${registeredNight.length?'has-ppl':''}">
+          ${registeredNight.length?`👥 ${registeredNight.length} người`:'Chưa có đăng ký'}
+        </span>
+      </div>
+      <div class="hl-staff-row">`;
+    window._staff.forEach(n=>{
+      const isReg=registeredNight.includes(n);
+      const editable=canEditHlReg(n,m,y,d)&&!past;
+      const esc=n.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      const escd=ds.replace(/'/g,"\\'");
+      const onclick=editable?`onclick="toggleHlNightReg('${esc}','${escd}')"`:'';
+      html+=`<button class="hl-s-btn ${isReg?'active':''} ${editable?'':'no-edit'}" ${onclick}>${n}${isReg?' ✓':''}</button>`;
+    });
+    html+=`</div></div>`;
+
+    html+=`</div>`; // end hl-day-block
+  });
+
+  document.getElementById('hlRegWrap').innerHTML=html;
+}
+
+function renderAll(){
+  const m=gM(),y=gY();
+  document.getElementById('permBanner1').innerHTML=getPermBannerHtml(m,y);
+  renderMatrix();
+  renderSunList();
+  renderHlReg();
+}
+
+// ============================================================
+// STAT
+// ============================================================
+function renderStat(){
+  const m=gM2(),y=gY2(),std=gStd2();
+  document.getElementById('statTitle').textContent=`Bảng công tháng ${m}/${y}`;
+  let totH=0,totC=0,totCa=0,totHLNight=0,totHLDay=0;
+  const rows=window._staff.map((n,i)=>{const r=calcP(n,m,y,std);totH+=r.h;totC+=r.cong;totCa+=r.tot;totHLNight+=r.nHLNight;totHLDay+=r.nHLDay;return{n,r,i}});
+  document.getElementById('kpiRow').innerHTML=`
+    <div class="kpi"><div class="kpi-lbl">Tổng ca trực</div><div class="kpi-val">${totCa}</div><div class="kpi-sub">tháng ${m}/${y}</div></div>
+    <div class="kpi a"><div class="kpi-lbl">Tổng giờ làm</div><div class="kpi-val">${totH.toFixed(1)}</div><div class="kpi-sub">giờ hiệu lực</div></div>
+    <div class="kpi g"><div class="kpi-lbl">Công quy đổi</div><div class="kpi-val">${totC.toFixed(2)}</div><div class="kpi-sub">÷ ${std}h/ngày</div></div>
+    <div class="kpi r"><div class="kpi-lbl">Trực lễ ngày/đêm</div><div class="kpi-val">${totHLDay}/${totHLNight}</div><div class="kpi-sub">lượt đăng ký</div></div>`;
+  let tbody='';
+  rows.forEach(({n,r,i})=>{
+    tbody+=`<tr>
+      <td style="color:var(--text3);font-weight:700">${i+1}</td>
+      <td style="font-weight:700">${n}</td>
+      <td>${r.nT?`<span class="pill ptoi">${r.nT} ca</span>`:'<span style="color:var(--text3)">—</span>'}</td>
+      <td>${r.n7?`<span class="pill pt7">${r.n7} ca</span>`:'<span style="color:var(--text3)">—</span>'}</td>
+      <td>${r.nC?`<span class="pill pcn">${r.nC} ca</span>`:'<span style="color:var(--text3)">—</span>'}</td>
+      <td>${r.nTC?`<span class="pill ptoicn">${r.nTC} ca</span>`:'<span style="color:var(--text3)">—</span>'}</td>
+      <td>${r.nHLDay?`<span class="pill phl">${r.nHLDay} ca (${r.hlDayH.toFixed(0)}h×hệ số)</span>`:'<span style="color:var(--text3)">—</span>'}</td>
+      <td>${r.nHLNight?`<span class="pill phl">${r.nHLNight} ca (${r.hlNightH.toFixed(1)}h×hệ số)</span>`:'<span style="color:var(--text3)">—</span>'}</td>
+      <td class="mono">${r.tot}</td><td class="mono">${r.h.toFixed(1)}h</td>
+      <td><span class="big">${r.cong.toFixed(2)}</span></td></tr>`;
+  });
+  document.getElementById('stBody').innerHTML=tbody||`<tr><td colspan="11" style="text-align:center;padding:32px;color:var(--text3)">Chưa có dữ liệu</td></tr>`;
+  document.getElementById('stFoot').innerHTML=`<tr><td colspan="2">Tổng cộng</td><td></td><td></td><td></td><td></td><td></td><td></td><td class="mono">${totCa}</td><td class="mono">${totH.toFixed(1)}h</td><td class="mono" style="font-size:16px">${totC.toFixed(2)}</td></tr>`;
+  let fls=[];
+  rows.filter(r=>r.r.tot>0).forEach(({n,r})=>{
+    let p=[];
+    if(r.nT)p.push(`${r.nT}×4,5h`);
+    if(r.n7)p.push(`${r.n7}×6h`);
+    if(r.nC)p.push(`${r.nC}×${std}h`);
+    if(r.nTC)p.push(`${r.nTC}×4,5h`);
+    if(r.nHLDay)p.push(`${r.nHLDay} ca lễ ngày (8h×hệ số)`);
+    if(r.nHLNight)p.push(`${r.nHLNight} ca lễ đêm (4,5h×hệ số)`);
+    if(p.length)fls.push(`<strong>${n}</strong>: ${p.join(' + ')} = ${r.h.toFixed(1)}h ÷ ${std} = <strong style="color:var(--green)">${r.cong.toFixed(2)} công</strong>`);
+  });
+  document.getElementById('fBox').innerHTML=`
+    <strong>Công thức:</strong><br>
+    • Tối T2–T6 = 4,5h &nbsp;|&nbsp; Tối T7 = 6h &nbsp;|&nbsp; Tối CN = 4,5h &nbsp;|&nbsp; Ngày CN = ${std}h<br>
+    • <strong>Trực lễ ngày</strong> (07:30–16:30) = 8h × Hệ số &nbsp;|&nbsp; <strong>Trực lễ đêm</strong> (17:30–22:00) = 4,5h × Hệ số<br>
+    • Ngày công = Tổng giờ hiệu lực ÷ ${std}h<br><br>
+    ${fls.join('<br>')||'<em style="color:var(--text3)">Chưa có dữ liệu.</em>'}`;
+}
+
+// ============================================================
+// HOLIDAY MANAGEMENT
+// ============================================================
+function selectMult(v){
+  _selectedMult=v;
+  ['1','15','2'].forEach(k=>{
+    const btn=document.getElementById('mBtn'+k);
+    if(btn){btn.className='mult-btn';if(k===v.replace('.',''))btn.classList.add('sel-x'+k)}
+  });
+  updateHlPreview();
+}
+
+function updateHlPreview(){
+  const mult=parseFloat(_selectedMult);
+  const stdH=parseFloat(document.getElementById('hlStdHours').value||8);
+  const dayEffH=(8*mult).toFixed(1);
+  const nightEffH=(4.5*mult).toFixed(1);
+  const dayCong=(8*mult/stdH).toFixed(2);
+  const nightCong=(4.5*mult/stdH).toFixed(2);
+  const multLbl={'1':'×1','1.5':'×1.5','2':'×2'}[_selectedMult]||'×'+_selectedMult;
+  document.getElementById('hlCalcPreview').innerHTML=
+    `☀️ <strong>Trực ngày</strong>: 8h × ${multLbl} = <strong>${dayEffH}h</strong> = <strong style="color:var(--green)">${dayCong} công</strong><br>
+     🌙 <strong>Trực đêm</strong>: 4,5h × ${multLbl} = <strong>${nightEffH}h</strong> = <strong style="color:var(--blue)">${nightCong} công</strong>`;
+}
+
+function renderHolidays(){
+  const years=new Set();
+  window._holidays.forEach(h=>years.add(h.startDate?h.startDate.substring(0,4):''));
+  const hlYear=document.getElementById('hlYear');
+  const curVal=hlYear.value;
+  hlYear.innerHTML='<option value="0">-- Tất cả --</option>'+
+    [...years].sort().reverse().map(y=>`<option value="${y}" ${curVal===y?'selected':''}>${y}</option>`).join('');
+
+  const filterY=hlYear.value;
+  let list=window._holidays.slice().sort((a,b)=>a.startDate.localeCompare(b.startDate));
+  if(filterY&&filterY!=='0') list=list.filter(h=>h.startDate&&h.startDate.startsWith(filterY));
+
+  const colorMap={red:'#c0392b',orange:'#d35400',purple:'#7c3aed'};
+  const multLabel={'1':'×1 Lương thường','1.5':'×1.5 Tăng 50%','2':'×2 Gấp đôi'};
+  const multCls={'1':'x1','1.5':'x15','2':'x2'};
+
+  if(!list.length){
+    document.getElementById('holidayList').innerHTML=`<div class="hl-empty">🎌 Chưa có ngày nghỉ lễ nào. Nhấn "Thêm ngày nghỉ" để bắt đầu.</div>`;
+    return;
+  }
+
+  document.getElementById('holidayList').innerHTML=list.map(h=>{
+    const fmtDate=(ds)=>{if(!ds)return '';const[y,m,d]=ds.split('-');return`${d}/${m}/${y}`};
+    const dateStr=h.endDate&&h.endDate!==h.startDate?`${fmtDate(h.startDate)} → ${fmtDate(h.endDate)}`:fmtDate(h.startDate);
+    const col=colorMap[h.color||'red'];
+    const mult=h.mult||'1.5';
+    const stdH=h.stdHours||8;
+    const multVal=parseFloat(mult);
+    const dayEffH=(8*multVal).toFixed(1);
+    const dayCong=(8*multVal/parseFloat(stdH)).toFixed(2);
+    const nightEffH=(4.5*multVal).toFixed(1);
+    const nightCong=(4.5*multVal/parseFloat(stdH)).toFixed(2);
+    return`<div class="holiday-item has-truc">
+      <div style="width:5px;min-height:50px;background:${col};border-radius:3px;flex-shrink:0;align-self:stretch"></div>
+      <div class="hl-date">${dateStr}</div>
+      <div class="hl-body">
+        <div class="hl-name">${h.name}</div>
+        <div class="hl-tags">
+          <span class="hl-tag hl-tag-mult ${multCls[mult]||'x15'}">💰 ${multLabel[mult]||'×'+mult}</span>
+          <span class="hl-tag" style="background:#fffbeb;border:1px solid #fde68a;color:#b45309">☀️ ngày: ${dayEffH}h = ${dayCong} công</span>
+          <span class="hl-tag" style="background:var(--blue-l);border:1px solid var(--blue-m);color:var(--blue)">🌙 đêm: ${nightEffH}h = ${nightCong} công</span>
+          ${h.note?`<span class="hl-tag hl-tag-note">📝 ${h.note}</span>`:''}
+        </div>
+      </div>
+      <div class="action-btns">
+        <button class="btn btn-sm btn-gold" onclick="openEditHoliday('${h.id}')">✏️</button>
+        <button class="btn btn-sm btn-red" onclick="deleteHoliday('${h.id}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openAddHoliday(){
+  editHolidayId=null;
+  document.getElementById('modalHolidayTitle').textContent='🎌 Thêm Ngày Nghỉ Lễ';
+  document.getElementById('hlStartDate').value='';
+  document.getElementById('hlEndDate').value='';
+  document.getElementById('hlName').value='';
+  document.getElementById('hlColor').value='red';
+  document.getElementById('hlNote').value='';
+  document.getElementById('hlStdHours').value='8';
+  selectMult('1.5');
+  updateHlPreview();
+  document.getElementById('modalHoliday').classList.remove('hidden');
+}
+
+function openEditHoliday(id){
+  const h=window._holidays.find(x=>x.id===id);if(!h)return;
+  editHolidayId=id;
+  document.getElementById('modalHolidayTitle').textContent='✏️ Sửa Ngày Nghỉ Lễ';
+  document.getElementById('hlStartDate').value=h.startDate||'';
+  document.getElementById('hlEndDate').value=h.endDate||'';
+  document.getElementById('hlName').value=h.name||'';
+  document.getElementById('hlColor').value=h.color||'red';
+  document.getElementById('hlNote').value=h.note||'';
+  document.getElementById('hlStdHours').value=h.stdHours||8;
+  selectMult(h.mult||'1.5');
+  updateHlPreview();
+  document.getElementById('modalHoliday').classList.remove('hidden');
+}
+
+async function saveHoliday(){
+  const startDate=document.getElementById('hlStartDate').value;
+  const endDate=document.getElementById('hlEndDate').value;
+  const name=document.getElementById('hlName').value.trim();
+  const color=document.getElementById('hlColor').value;
+  const note=document.getElementById('hlNote').value.trim();
+  const mult=_selectedMult;
+  const stdHours=parseFloat(document.getElementById('hlStdHours').value)||8;
+  if(!startDate){alert("Vui lòng chọn ngày bắt đầu!");return}
+  if(!name){alert("Vui lòng nhập tên ngày nghỉ!");return}
+  const obj={startDate,endDate,name,color,note,mult,stdHours};
+  if(editHolidayId){
+    const h=window._holidays.find(x=>x.id===editHolidayId);if(!h)return;
+    Object.assign(h,obj);
+  } else {
+    window._holidays.push({id:'hl_'+Date.now(),...obj});
+  }
+  if(window._saveHolidays) await window._saveHolidays();
+  closeModal('modalHoliday');
+  renderHolidays();
+  renderAll();
+}
+
+async function deleteHoliday(id){
+  if(!confirm("Xóa ngày nghỉ lễ này?"))return;
+  window._holidays=window._holidays.filter(h=>h.id!==id);
+  if(window._saveHolidays) await window._saveHolidays();
+  renderHolidays();renderAll();
+}
+
+// ============================================================
+// STAFF MANAGEMENT
+// ============================================================
+function renderStaff(){
+  let html='';
+  window._staff.forEach((s,idx)=>{
+    html+=`<tr>
+      <td style="color:var(--text3);font-weight:700">${idx+1}</td>
+      <td style="font-weight:700">${s}</td>
+      <td><div class="action-btns" style="justify-content:flex-end">
+        <button class="btn btn-sm btn-gold" onclick="editStaff(${idx})">✏️ Sửa</button>
+        <button class="btn btn-sm btn-red" onclick="deleteStaff(${idx})">🗑</button>
+      </div></td></tr>`;
+  });
+  document.getElementById('staffTbody').innerHTML=html;
+}
+
+function addStaff(){
+  if(!isAdmin())return;
+  const input=document.getElementById('newStaffName');
+  const val=input.value.trim();
+  if(!val){alert("Vui lòng nhập tên KTV!");return}
+  if(window._staff.includes(val)){alert("Tên KTV này đã tồn tại!");return}
+  window._staff.push(val);
+  if(window._saveStaffList)window._saveStaffList();
+  input.value='';renderStaff();renderAll();
+}
+
+function editStaff(idx){
+  if(!isAdmin())return;
+  const oldName=window._staff[idx];
+  const newName=prompt(`Sửa tên KTV "${oldName}":`,oldName);
+  if(!newName||!newName.trim()||newName.trim()===oldName)return;
+  const fn=newName.trim();
+  if(window._staff.includes(fn)){alert("Tên đã tồn tại!");return}
+  for(let k in window._att){if(window._att[k][oldName]){window._att[k][fn]=window._att[k][oldName];delete window._att[k][oldName]}}
+  for(let k in window._attDay){if(window._attDay[k][oldName]){window._attDay[k][fn]=window._attDay[k][oldName];delete window._attDay[k][oldName]}}
+  window._accounts.forEach(a=>{if(a.staffLink===oldName){a.staffLink=fn;if(window._saveAccountDoc)window._saveAccountDoc(a)}});
+  window._staff[idx]=fn;
+  if(window._saveStaffList)window._saveStaffList();
+  const m=gM(),y=gY();
+  if(window._saveAtt)window._saveAtt(m,y);
+  if(window._saveAttDay)window._saveAttDay(m,y);
+  renderStaff();renderAll();
+}
+
+function deleteStaff(idx){
+  if(!isAdmin())return;
+  if(confirm(`Xóa KTV "${window._staff[idx]}"?`)){
+    window._staff.splice(idx,1);
+    if(window._saveStaffList)window._saveStaffList();
+    renderStaff();renderAll();
+  }
+}
+
+// ============================================================
+// ACCOUNT MANAGEMENT
+// ============================================================
+function renderAccounts(){
+  document.getElementById('accGrid').innerHTML=window._accounts.map(a=>{
+    const ia=a.role==='admin';const isSelf=a.id===currentUser.id;
+    return`<div class="acc-card ${ia?'admin-card':'staff-card'}">
+      <div class="acc-header">
+        <div class="acc-avatar ${ia?'av-admin':'av-staff'}">${a.name.charAt(0)}</div>
+        <div class="acc-info">
+          <div class="acc-name">${a.name}${isSelf?' <span style="font-size:11px;color:var(--blue)">(Bạn)</span>':''}</div>
+          <div class="acc-role ${ia?'r-admin':'r-staff'}">${ia?'🔑 Admin':'👤 Nhân viên'}</div>
+        </div>
+      </div>
+      <div class="acc-meta"><span>👤 ${a.username}</span>${a.staffLink?`<span>🔗 ${a.staffLink}</span>`:''}</div>
+      <div class="acc-actions">
+        <button class="btn btn-sm btn-gold" onclick="openEditAccount('${a.id}')">✏️ Sửa</button>
+        <button class="btn btn-sm" onclick="openPwdModal('${a.id}')">🔒 MK</button>
+        ${!isSelf?`<button class="btn btn-sm btn-red" onclick="deleteAccount('${a.id}')">🗑</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateRoleUI(){
+  const role=document.getElementById('mAccRole').value;
+  document.getElementById('mAccStaffField').style.display=role==='staff'?'':'none';
+}
+function populateStaffSelect(){
+  document.getElementById('mAccStaff').innerHTML=
+    `<option value="">-- Không liên kết --</option>`+
+    window._staff.map(s=>`<option value="${s}">${s}</option>`).join('');
+}
+function openAddAccount(){
+  editAccId=null;
+  document.getElementById('modalAccTitle').textContent='➕ Thêm Tài Khoản';
+  ['mAccName','mAccUser','mAccPass'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('mAccRole').value='staff';
+  document.getElementById('mAccUser').disabled=false;
+  populateStaffSelect();document.getElementById('mAccStaff').value='';
+  updateRoleUI();document.getElementById('modalAcc').classList.remove('hidden');
+}
+function openEditAccount(id){
+  const acc=window._accounts.find(a=>a.id===id);if(!acc)return;
+  editAccId=id;
+  document.getElementById('modalAccTitle').textContent='✏️ Sửa Tài Khoản';
+  document.getElementById('mAccName').value=acc.name;
+  document.getElementById('mAccUser').value=acc.username;
+  document.getElementById('mAccUser').disabled=true;
+  document.getElementById('mAccPass').value='';
+  document.getElementById('mAccRole').value=acc.role;
+  populateStaffSelect();document.getElementById('mAccStaff').value=acc.staffLink||'';
+  updateRoleUI();document.getElementById('modalAcc').classList.remove('hidden');
+}
+async function saveAccount(){
+  const name=document.getElementById('mAccName').value.trim();
+  const username=document.getElementById('mAccUser').value.trim();
+  const pass=document.getElementById('mAccPass').value;
+  const role=document.getElementById('mAccRole').value;
+  const staffLink=role==='staff'?(document.getElementById('mAccStaff').value||null):null;
+  if(!name||!username){alert("Vui lòng nhập đầy đủ!");return}
+  if(!editAccId&&!pass){alert("Vui lòng nhập mật khẩu!");return}
+  if(!editAccId&&window._accounts.find(a=>a.username===username)){alert("Username đã tồn tại!");return}
+  if(editAccId){
+    const acc=window._accounts.find(a=>a.id===editAccId);if(!acc)return;
+    acc.name=name;acc.role=role;acc.staffLink=staffLink;if(pass)acc.password=pass;
+    if(currentUser.id===editAccId){currentUser.name=name;currentUser.role=role;currentUser.staffLink=staffLink;document.getElementById('userBadgeName').textContent=name+(role==='admin'?' (Admin)':'')}
+    if(window._saveAccountDoc)await window._saveAccountDoc(acc);
+  } else {
+    const newAcc={id:'acc_'+Date.now(),username,password:pass,name,role,staffLink};
+    window._accounts.push(newAcc);
+    if(window._saveAccountDoc)await window._saveAccountDoc(newAcc);
+  }
+  closeModal('modalAcc');renderAccounts();
+}
+async function deleteAccount(id){
+  if(id===currentUser.id){alert("Không thể xóa tài khoản đang đăng nhập!");return}
+  const acc=window._accounts.find(a=>a.id===id);if(!acc)return;
+  if(confirm(`Xóa tài khoản "${acc.name}"?`)){
+    window._accounts=window._accounts.filter(a=>a.id!==id);
+    if(window._deleteAccountDoc)await window._deleteAccountDoc(id);
+    renderAccounts();
+  }
+}
+function closeModal(id){document.getElementById(id).classList.add('hidden')}
+function openPwdModal(id){
+  pwdAccId=id;
+  const acc=window._accounts.find(a=>a.id===id);
+  document.getElementById('pwdTarget').textContent=acc?`${acc.name} (${acc.username})`:'';
+  ['newPwd1','newPwd2'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('pwdErr').classList.remove('show');
+  document.getElementById('modalPwd').classList.remove('hidden');
+}
+function closePwdModal(){closeModal('modalPwd')}
+async function savePwd(){
+  const p1=document.getElementById('newPwd1').value;
+  const p2=document.getElementById('newPwd2').value;
+  if(!p1||p1!==p2){document.getElementById('pwdErr').classList.add('show');return}
+  const acc=window._accounts.find(a=>a.id===pwdAccId);if(!acc)return;
+  acc.password=p1;if(window._saveAccountDoc)await window._saveAccountDoc(acc);
+  closePwdModal();alert("Đổi mật khẩu thành công!");
+}
+
+// ============================================================
+// CLEAR MONTH
+// ============================================================
+async function clearMonth(){
+  if(!isAdmin())return;
+  if(!confirm(`Xóa toàn bộ dữ liệu trực tháng ${gM()}/${gY()}?`))return;
+  const m=gM(),y=gY(),k=mk(m,y);
+  delete window._att[k];delete window._attDay[k];
+  delete window._hlReg[k];delete window._hlDayReg[k];
+  if(window._saveAtt)await window._saveAtt(m,y);
+  if(window._saveAttDay)await window._saveAttDay(m,y);
+  if(window._saveHlReg)await window._saveHlReg(m,y);
+  if(window._saveHlDayReg)await window._saveHlDayReg(m,y);
+  renderAll();
+}
+
+// ============================================================
+// CSV EXPORT
+// ============================================================
+function exportCSV(){
+  const m=gM2()||gM(),y=gY2()||gY(),std=gStd2()||gStd();
+  const es=isAdmin()?window._staff:window._staff.filter(n=>n===myStaffLink());
+  let csv='\uFEFF';
+  csv+=`BẢNG CÔNG KỸ THUẬT THÁNG ${m}/${y}\nGiờ chuẩn: ${std}h/ngày\n\n`;
+  csv+=`STT,Họ và tên,Tối T2-T6,Tối T7,Ngày CN,Tối CN,Lễ ngày,Lễ đêm,Tổng ca,Tổng giờ,Ngày công\n`;
+  es.forEach((n,i)=>{const r=calcP(n,m,y,std);csv+=`${i+1},"${n}",${r.nT},${r.n7},${r.nC},${r.nTC},${r.nHLDay},${r.nHLNight},${r.tot},${r.h.toFixed(1)},${r.cong.toFixed(2)}\n`});
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=`cong_ky_thuat_T${m}_${y}.csv`;a.click();URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
