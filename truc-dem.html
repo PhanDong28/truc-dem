@@ -99,10 +99,8 @@ async function loadAllFromFirebase() {
     window._holidays = holidaysDoc ? holidaysDoc.list : [];
     const lockedDoc = await fbGet('config', 'lockedStaff');
     window._lockedStaff = lockedDoc ? lockedDoc.list : [];
-    // hlReg: trực đêm lễ (4.5h)
     const hlRegAll = await fbGetAll('hlReg');
     window._hlReg = hlRegAll;
-    // hlDayReg: trực ngày lễ (8h công chuẩn)
     const hlDayRegAll = await fbGetAll('hlDayReg');
     window._hlDayReg = hlDayRegAll;
     return true;
@@ -114,7 +112,6 @@ async function loadAllFromFirebase() {
 }
 
 let _unsubAtt = null, _unsubAttDay = null, _unsubHlReg = null, _unsubHlDayReg = null;
-// Flag để tránh re-render khi chính máy mình vừa lưu (local write)
 let _localWriteAtt = false, _localWriteAttDay = false, _localWriteHlReg = false, _localWriteHlDayReg = false;
 
 function startRealtimeListeners(m, y, onUpdate) {
@@ -127,7 +124,6 @@ function startRealtimeListeners(m, y, onUpdate) {
   _unsubAtt = onSnapshot(doc(db, 'att', key), snap => {
     if (snap.exists()) window._att[key] = snap.data();
     else delete window._att[key];
-    // Chỉ render lại nếu là thay đổi từ máy khác
     if (!_localWriteAtt) { if (onUpdate) onUpdate(); }
     _localWriteAtt = false;
   });
@@ -294,7 +290,6 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:var(--bg);color:var(--te
 .login-logo{width:64px;height:64px;background:linear-gradient(135deg,var(--blue),var(--blue-d));border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 20px;box-shadow:0 8px 24px rgba(42,90,164,0.4)}
 .login-title{font-size:23px;font-weight:900;text-align:center;color:var(--text);margin-bottom:3px;letter-spacing:-.4px}
 .login-sub{font-size:13px;color:var(--text3);text-align:center;margin-bottom:24px;font-weight:600}
-/* ── Ẩn firebase badge trên login, chỉ hiện dòng kết nối nhỏ ── */
 .login-connect-badge{display:flex;align-items:center;justify-content:center;gap:5px;background:var(--green-l);border:1px solid var(--green-m);border-radius:7px;padding:4px 10px;font-size:11.5px;font-weight:700;color:var(--green);margin-bottom:18px}
 .login-connect-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:sdBlink 2s infinite}
 .login-field{margin-bottom:15px}
@@ -319,7 +314,6 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:var(--bg);color:var(--te
 .user-badge{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,0.14);border:1.5px solid rgba(255,255,255,0.28);border-radius:8px;padding:5px 12px;font-size:12.5px;font-weight:700;color:#fff}
 .role-dot{width:8px;height:8px;border-radius:50%;background:#86efac}
 .role-dot.admin{background:var(--gold)}
-/* ── Badge kết nối gọn trong header ── */
 .conn-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(22,163,74,0.18);border:1px solid rgba(22,163,74,0.35);border-radius:6px;padding:4px 9px;font-size:11px;font-weight:700;color:#86efac}
 .conn-dot{width:5px;height:5px;border-radius:50%;background:#4ade80;animation:sdBlink 2.5s ease-in-out infinite}
 .hdr-actions{display:flex;gap:7px}
@@ -435,7 +429,6 @@ tbody.rows tr:nth-child(even) td.dc.vt7.off{background:#fffbeb}
 .s-btn.no-edit.active:hover{background:var(--blue)!important;border-color:var(--blue)!important;color:#fff!important}
 
 /* ── HOLIDAY REGISTRATION ── */
-/* Card header riêng cho ngày lễ - đêm và ngày */
 .hl-day-block{border-bottom:1px solid #ffe4e1;padding:16px 20px}
 .hl-day-block:last-child{border-bottom:none}
 .hl-day-meta{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:10px}
@@ -448,8 +441,6 @@ tbody.rows tr:nth-child(even) td.dc.vt7.off{background:#fffbeb}
 .mult-x1{background:#f0fdf4;border:1px solid #86efac;color:var(--green)}
 .mult-x15{background:#fef7e8;border:1px solid var(--gold-m);color:var(--amber)}
 .mult-x2{background:#fef2f2;border:1px solid #fca5a5;color:var(--red)}
-
-/* Ca sub-section trong ngày lễ */
 .hl-shift-section{margin-top:10px;border:1.5px solid var(--border);border-radius:10px;overflow:hidden}
 .hl-shift-header{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;font-size:12.5px;font-weight:800;gap:10px;flex-wrap:wrap}
 .hl-shift-header.day-shift{background:#fffbeb;border-bottom:1.5px solid #fde68a;color:#b45309}
@@ -878,7 +869,6 @@ table.st tfoot td{background:var(--blue-l);font-weight:800;color:var(--blue);bor
     <div class="modal-section">
       <div class="modal-section-title">⚙️ Hệ số lương ngày lễ (áp dụng cho cả trực ngày & đêm)</div>
 
-      <!-- Hệ số lương -->
       <div class="modal-field">
         <label>💰 Hệ số lương</label>
         <div class="mult-selector">
@@ -894,7 +884,6 @@ table.st tfoot td{background:var(--blue-l);font-weight:800;color:var(--blue);bor
         </div>
       </div>
 
-      <!-- Số giờ tính 1 công -->
       <div class="modal-field">
         <label>📋 Quy đổi công <span style="color:var(--text3);font-weight:600">(số giờ = 1 ngày công)</span></label>
         <div style="display:flex;align-items:center;gap:10px">
@@ -938,7 +927,7 @@ table.st tfoot td{background:var(--blue-l);font-weight:800;color:var(--blue);bor
 
 <script>
 // ============================================================
-// DIALOG & TOAST SYSTEM (thay thế alert/confirm)
+// DIALOG & TOAST SYSTEM
 // ============================================================
 let _dialogResolve = null;
 let _dialogBarTimer = null;
@@ -987,12 +976,10 @@ function _closeDialog(val){
   if(_dialogResolve){ _dialogResolve(val); _dialogResolve=null; }
 }
 
-// Đóng khi click ngoài
 document.getElementById('dialogOverlay').addEventListener('click', e=>{
   if(e.target===document.getElementById('dialogOverlay')) _closeDialog(false);
 });
 
-// API thay thế alert/confirm/prompt
 function dlgAlert(msg, {title='Thông báo', icon='ℹ️', iconCls='ic-info'}={}){
   return _showDialog({icon,iconCls,title,msg,actions:[{label:'OK',cls:'btn-primary',value:true}]});
 }
@@ -1014,7 +1001,6 @@ function dlgPrompt(msg, {title='Nhập thông tin', inputLabel='', inputDefault=
       if(val==='__ok__') resolve(document.getElementById('dialogInput').value);
       else resolve(null);
     });
-    // Enter key
     document.getElementById('dialogInput').onkeydown = e=>{
       if(e.key==='Enter') _closeDialog('__ok__');
       if(e.key==='Escape') _closeDialog('__cancel__');
@@ -1022,7 +1008,6 @@ function dlgPrompt(msg, {title='Nhập thông tin', inputLabel='', inputDefault=
   });
 }
 
-// Toast notifications
 function showToast(msg, type='info', duration=3200){
   const wrap=document.getElementById('toastWrap');
   const icons={success:'✅',error:'❌',info:'ℹ️',warn:'⚠️'};
@@ -1037,18 +1022,20 @@ function showToast(msg, type='info', duration=3200){
   }, duration);
 }
 
-const MN=['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
+// ============================================================
+// ✅ FIX: Khai báo DOW_LBL và MN ở đây (global scope)
+// ============================================================
+const MN = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
+const DOW_LBL = ['CN','T2','T3','T4','T5','T6','T7'];
 
 window._staff = [];
 window._accounts = [];
 window._att = {};
 window._attDay = {};
 window._holidays = [];
-window._lockedStaff = [];       // ca tối thông thường + ca tối lễ (bảng ma trận)
-window._attDay = {};    // trực ngày CN
-window._holidays = [];
-window._hlReg = {};     // trực ĐÊM lễ (4.5h × hệ số) — chọn trong bảng đăng ký
-window._hlDayReg = {};  // trực NGÀY lễ (8h × hệ số) — chọn trong bảng đăng ký
+window._lockedStaff = [];
+window._hlReg = {};
+window._hlDayReg = {};
 window._firebaseReady = false;
 
 let currentUser = null;
@@ -1071,7 +1058,6 @@ window._onFirebaseReady = function() {
   document.getElementById('loadMsg').textContent = 'Sẵn sàng!';
   setTimeout(() => {
     document.getElementById('loadingOverlay').classList.add('hidden');
-    // ── Khôi phục session nếu đã đăng nhập trước đó ──
     const savedSession = sessionStorage.getItem('_lichtruc_user');
     if (savedSession) {
       try {
@@ -1151,7 +1137,6 @@ function getHolidayTrucDatesInMonth(m,y){
   return result;
 }
 
-// ── Trực đêm lễ: lấy từ _hlReg (4.5h × hệ số) ──
 function getHlNightRegForDate(m,y,ds){
   const k=m+'_'+y;
   return (window._hlReg[k]&&window._hlReg[k][ds]) ? window._hlReg[k][ds] : [];
@@ -1172,7 +1157,6 @@ function toggleHlNightReg(n,ds){
   renderHlReg();
 }
 
-// ── Trực ngày lễ: lấy từ _hlDayReg (8h × hệ số) ──
 function getHlDayRegForDate(m,y,ds){
   const k=m+'_'+y;
   return (window._hlDayReg[k]&&window._hlDayReg[k][ds]) ? window._hlDayReg[k][ds] : [];
@@ -1203,7 +1187,6 @@ function doLogin(){
   if(!acc){document.getElementById('loginErr').classList.add('show');return}
   document.getElementById('loginErr').classList.remove('show');
   currentUser={...acc};
-  // ── Lưu session ──
   sessionStorage.setItem('_lichtruc_user', JSON.stringify({id: acc.id, username: acc.username}));
   document.getElementById('loginScreen').classList.add('fade-out');
   setTimeout(()=>{
@@ -1262,7 +1245,6 @@ function onMonthYearChange(){
   renderAll();
 }
 
-// Ca tối thông thường (bảng matrix)
 function getC(m,y,n,d){const k=mk(m,y);return window._att[k]&&window._att[k][n]?window._att[k][n][d]||null:null}
 function setC(m,y,n,d,v){
   const k=mk(m,y);
@@ -1272,7 +1254,6 @@ function setC(m,y,n,d,v){
   if(window._saveAtt)window._saveAtt(m,y);
 }
 
-// Trực ngày CN
 function getCDay(m,y,n,d){const k=mk(m,y);return window._attDay[k]&&window._attDay[k][n]?window._attDay[k][n][d]||false:false}
 function toggleSunDay(n,d){
   if(!canEditSunDay(n,gM(),gY(),d))return;
@@ -1285,20 +1266,18 @@ function toggleSunDay(n,d){
 }
 
 // ============================================================
-// TÍNH CÔNG — tách riêng trực ngày lễ và trực đêm lễ
+// TÍNH CÔNG
 // ============================================================
 function calcP(n,m,y,std){
   const days=daysIn(y,m);
   let h=0, nT=0, n7=0, nC=0, nTC=0;
-  let nHLNight=0, hlNightH=0, hlNightCong=0;  // trực đêm lễ (4.5h × hệ số)
-  let nHLDay=0, hlDayH=0, hlDayCong=0;        // trực ngày lễ (8h × hệ số)
+  let nHLNight=0, hlNightH=0, hlNightCong=0;
+  let nHLDay=0, hlDayH=0, hlDayCong=0;
 
-  // Ca tối thông thường (không phải ngày lễ)
   for(let d=1;d<=days;d++){
     const hl=getHolidayForDate(y,m,d);
     const t=getC(m,y,n,d);
     if(t && !hl){
-      // Ngày thường
       h += t==='toi'?4.5:t==='t7'?6:4.5;
       if(t==='toi')nT++;
       else if(t==='t7')n7++;
@@ -1307,13 +1286,11 @@ function calcP(n,m,y,std){
     if(getCDay(m,y,n,d)){nC++;h+=std}
   }
 
-  // Ngày lễ: trực đêm và trực ngày tách riêng
   const hlDates=getHolidayTrucDatesInMonth(m,y);
   hlDates.forEach(({d,ds,h:hl})=>{
     const mult=parseFloat(hl.mult||'1.5');
     const stdH=parseFloat(hl.stdHours||'8');
 
-    // Trực đêm lễ: 4.5h × hệ số (đăng ký riêng, không liên quan bảng matrix)
     if(isHlNightReg(m,y,ds,n)){
       nHLNight++;
       const effH=4.5*mult;
@@ -1322,7 +1299,6 @@ function calcP(n,m,y,std){
       h+=effH;
     }
 
-    // Trực ngày lễ: 8h × hệ số
     if(isHlDayReg(m,y,ds,n)){
       nHLDay++;
       const effH=8*mult;
@@ -1353,18 +1329,16 @@ function switchTab(id,btn){
 }
 
 // ============================================================
-// TOGGLE CA TỐI (bảng matrix) — chỉ cho ngày thường
-// Ngày lễ: chỉ toggle trong bảng đăng ký riêng
+// TOGGLE CA TỐI
 // ============================================================
 function toggle(n,d,dw){
   if(!canEditCell(n,gM(),gY(),d))return;
   const m=gM(),y=gY();
   const hl=getHolidayForDate(y,m,d);
-  // Nếu là ngày lễ → toggle trực đêm lễ thay vì ghi vào matrix
   if(hl){
     const ds=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     toggleHlNightReg(n,ds);
-    patchCell(n,d,dw,getC(m,y,n,d),m,y); // cập nhật ô
+    patchCell(n,d,dw,getC(m,y,n,d),m,y);
     return;
   }
   const cur=getC(m,y,n,d);
@@ -1447,7 +1421,7 @@ function renderMatrix(){
   h+='</tr></thead><tbody class="rows">';
 
   window._staff.forEach(n=>{
-    if(isStaffLocked(n))return; // ẩn KTV bị khóa
+    if(isStaffLocked(n))return;
     h+=`<tr><td class="nm">${n}</td>`;
     dates.forEach(({d,dw})=>{
       const hl=getHolidayForDate(y,m,d);
@@ -1513,7 +1487,7 @@ function renderSunList(){
         </div>
         <div class="sun-staff">`;
       window._staff.forEach(n=>{
-        if(isStaffLocked(n))return; // ẩn KTV bị khóa
+        if(isStaffLocked(n))return;
         const isDay=getCDay(m,y,n,d);
         const editable=canEditSunDay(n,m,y,d);
         const esc=n.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
@@ -1529,7 +1503,6 @@ function renderSunList(){
 
 // ============================================================
 // RENDER HOLIDAY REGISTRATION
-// ── Tách 2 ca: Trực ngày (8h) + Trực đêm (4.5h), mỗi ca chọn người riêng
 // ============================================================
 function renderHlReg(){
   const m=gM(),y=gY();
@@ -1549,10 +1522,8 @@ function renderHlReg(){
     const stdH=parseFloat(hl.stdHours||'8');
     const multVal=parseFloat(mult);
 
-    // Tính công trực ngày: 8h × hệ số
     const dayEffH=(8*multVal).toFixed(1);
     const dayCong=(8*multVal/stdH).toFixed(2);
-    // Tính công trực đêm: 4.5h × hệ số
     const nightEffH=(4.5*multVal).toFixed(1);
     const nightCong=(4.5*multVal/stdH).toFixed(2);
 
@@ -1571,7 +1542,6 @@ function renderHlReg(){
         </div>
       </div>`;
 
-    // ── CA TRỰC NGÀY ──
     html+=`<div class="hl-shift-section">
       <div class="hl-shift-header day-shift">
         <div class="hl-shift-info">
@@ -1594,7 +1564,6 @@ function renderHlReg(){
     });
     html+=`</div></div>`;
 
-    // ── CA TRỰC ĐÊM ──
     html+=`<div class="hl-shift-section" style="margin-top:8px">
       <div class="hl-shift-header night-shift">
         <div class="hl-shift-info">
@@ -1617,7 +1586,7 @@ function renderHlReg(){
     });
     html+=`</div></div>`;
 
-    html+=`</div>`; // end hl-day-block
+    html+=`</div>`;
   });
 
   document.getElementById('hlRegWrap').innerHTML=html;
@@ -1826,8 +1795,6 @@ async function deleteHoliday(id){
 // ============================================================
 // STAFF MANAGEMENT
 // ============================================================
-// ── Khóa/mở KTV ──────────────────────────────────────────────
-// Lưu danh sách KTV bị khóa trong config/lockedStaff
 function isStaffLocked(name){ return (window._lockedStaff||[]).includes(name); }
 async function toggleLockStaff(name){
   if(!isAdmin())return;
@@ -2055,9 +2022,7 @@ function exportHTMLReport(){
     : window._staff.filter(n=>n===myStaffLink()&&!isStaffLocked(n));
   const now=new Date();
   const MN_VN=['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
-  const DOW_VN=['CN','T2','T3','T4','T5','T6','T7'];
 
-  // Tính dữ liệu tổng
   let totH=0,totC=0,totCa=0,totHLD=0,totHLN=0;
   const rows=es.map((n,i)=>{
     const r=calcP(n,m,y,std);
@@ -2065,7 +2030,6 @@ function exportHTMLReport(){
     return{n,r,i};
   });
 
-  // Chi tiết lịch trực từng ngày trong tháng
   const days=daysIn(y,m);
   const calRows=[];
   for(let d=1;d<=days;d++){
@@ -2083,9 +2047,7 @@ function exportHTMLReport(){
     }
   }
 
-  // Ngày lễ trong tháng
   const hlDates=getHolidayTrucDatesInMonth(m,y);
-
   const printDate=`${now.getDate()}/${now.getMonth()+1}/${now.getFullYear()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
 
   const html=`<!DOCTYPE html>
@@ -2099,8 +2061,6 @@ function exportHTMLReport(){
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Be Vietnam Pro',sans-serif;background:#f0f4fb;color:#1a2d4a;font-size:13px;padding:24px}
 .page{max-width:960px;margin:0 auto}
-
-/* Header */
 .rpt-header{background:linear-gradient(135deg,#152f60 0%,#2a5aa4 60%,#1a6e7a 100%);border-radius:18px;padding:32px 36px;margin-bottom:24px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
 .rpt-logo{width:60px;height:60px;background:rgba(255,255,255,0.15);border:2px solid rgba(255,255,255,0.3);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:30px;flex-shrink:0}
 .rpt-brand{flex:1}
@@ -2108,8 +2068,6 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:#f0f4fb;color:#1a2d4a;fo
 .rpt-sub{font-size:13px;opacity:.75;margin-top:3px;font-weight:600}
 .rpt-meta{text-align:right;font-size:12px;opacity:.7;font-weight:600;line-height:1.8}
 .rpt-period{background:rgba(255,255,255,0.18);border:1.5px solid rgba(255,255,255,0.3);border-radius:10px;padding:6px 16px;font-size:15px;font-weight:900;letter-spacing:-.3px;margin-bottom:6px;display:inline-block}
-
-/* KPI */
 .kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
 .kpi{background:#fff;border:1px solid #d5dff0;border-radius:14px;padding:14px 16px;box-shadow:0 2px 10px rgba(42,90,164,.08)}
 .kpi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
@@ -2122,12 +2080,8 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:#f0f4fb;color:#1a2d4a;fo
 .kpi.gold .kpi-icon{background:#fef7e8;} .kpi.gold .kpi-val{color:#d97706}
 .kpi.red .kpi-icon{background:#fef2f2;} .kpi.red .kpi-val{color:#dc2626}
 .kpi.teal .kpi-icon{background:#ccfbf1;} .kpi.teal .kpi-val{color:#0d9488}
-
-/* Section title */
 .sec-title{font-size:15px;font-weight:900;color:#1a2d4a;margin-bottom:12px;display:flex;align-items:center;gap:8px;padding-bottom:8px;border-bottom:2px solid #d5dff0}
 .sec-title .dot{width:4px;height:20px;background:#2a5aa4;border-radius:2px;flex-shrink:0}
-
-/* Main table */
 .card{background:#fff;border:1px solid #d5dff0;border-radius:14px;box-shadow:0 2px 10px rgba(42,90,164,.08);overflow:hidden;margin-bottom:20px}
 table{width:100%;border-collapse:collapse}
 th{background:#2a5aa4;color:#fff;padding:10px 12px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;text-align:left;white-space:nowrap}
@@ -2145,11 +2099,7 @@ tr:hover td{background:#eef3fb}
 .pcn{background:#f0fdf4;color:#16a34a} .ptoicn{background:#ccfbf1;color:#0d9488}
 .phl-d{background:#fffbeb;color:#b45309} .phl-n{background:#eef3fb;color:#2a5aa4}
 .zero{color:#c0cfe0;text-align:center}
-
-/* Total row */
 .tfoot-row td{background:#eef3fb!important;font-weight:800;color:#2a5aa4;border-top:2px solid #b8cef0}
-
-/* Calendar detail */
 .cal-table th{background:#152f60}
 .cal-date{font-weight:800;white-space:nowrap}
 .cal-dow{display:inline-flex;width:22px;height:22px;align-items:center;justify-content:center;border-radius:6px;font-size:10px;font-weight:800;margin-right:4px}
@@ -2158,33 +2108,18 @@ tr:hover td{background:#eef3fb}
 .shift-night{background:#eef3fb;border:1px solid #b8cef0;border-radius:6px;padding:3px 8px;display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;color:#2a5aa4;margin:2px}
 .shift-day{background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:3px 8px;display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;color:#b45309;margin:2px}
 .shift-cn{background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:3px 8px;display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;color:#16a34a;margin:2px}
-.shifts-cell{display:flex;flex-wrap:wrap;align-items:center}
 .no-data{color:#8ea5c0;font-style:italic;font-size:12px;padding:24px;text-align:center}
-
-/* Holiday table */
 .hl-table th{background:#a93226}
 .hl-mult{display:inline-flex;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:800}
 .m1{background:#f0fdf4;color:#16a34a} .m15{background:#fef7e8;color:#d97706} .m2{background:#fef2f2;color:#dc2626}
-
-/* Formula box */
 .formula-box{background:#f7f9fd;border:1.5px solid #d5dff0;border-left:4px solid #2a5aa4;border-radius:10px;padding:14px 18px;font-size:12px;color:#4a6080;line-height:2;margin-bottom:20px}
 .formula-box strong{color:#1a2d4a}
-
-/* Footer */
 .rpt-footer{text-align:center;color:#8ea5c0;font-size:11px;font-weight:600;padding:16px 0 4px;line-height:2}
-
-@media print{
-  body{background:#fff;padding:12px}
-  .card{box-shadow:none;border:1px solid #ccc}
-  .rpt-header{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  th{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-}
+@media print{body{background:#fff;padding:12px}.card{box-shadow:none;border:1px solid #ccc}.rpt-header{-webkit-print-color-adjust:exact;print-color-adjust:exact}th{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 </style>
 </head>
 <body>
 <div class="page">
-
-<!-- HEADER -->
 <div class="rpt-header">
   <div style="display:flex;align-items:center;gap:16px">
     <div class="rpt-logo">🔧</div>
@@ -2196,79 +2131,29 @@ tr:hover td{background:#eef3fb}
   </div>
   <div style="text-align:right">
     <div class="rpt-period">${MN_VN[m-1]} / ${y}</div>
-    <div class="rpt-meta">
-      Giờ chuẩn: <strong style="color:#fad27a">${std}h</strong> = 1 ngày công<br>
-      Xuất lúc: ${printDate}<br>
-      ${isAdmin()?'Báo cáo toàn bộ':'Báo cáo cá nhân'}
-    </div>
+    <div class="rpt-meta">Giờ chuẩn: <strong style="color:#fad27a">${std}h</strong> = 1 ngày công<br>Xuất lúc: ${printDate}<br>${isAdmin()?'Báo cáo toàn bộ':'Báo cáo cá nhân'}</div>
   </div>
 </div>
-
-<!-- KPI -->
 <div class="kpi-row">
-  <div class="kpi blue">
-    <div class="kpi-top"><div class="kpi-lbl">Tổng ca trực</div><div class="kpi-icon">📅</div></div>
-    <div class="kpi-val">${totCa}</div>
-    <div class="kpi-desc">ca trong tháng</div>
-  </div>
-  <div class="kpi gold">
-    <div class="kpi-top"><div class="kpi-lbl">Tổng giờ làm</div><div class="kpi-icon">⏱️</div></div>
-    <div class="kpi-val">${totH.toFixed(1)}</div>
-    <div class="kpi-desc">giờ hiệu lực</div>
-  </div>
-  <div class="kpi green">
-    <div class="kpi-top"><div class="kpi-lbl">Công quy đổi</div><div class="kpi-icon">✅</div></div>
-    <div class="kpi-val">${totC.toFixed(2)}</div>
-    <div class="kpi-desc">÷ ${std}h/ngày</div>
-  </div>
-  <div class="kpi red">
-    <div class="kpi-top"><div class="kpi-lbl">Trực lễ ngày</div><div class="kpi-icon">☀️</div></div>
-    <div class="kpi-val">${totHLD}</div>
-    <div class="kpi-desc">lượt đăng ký</div>
-  </div>
-  <div class="kpi teal">
-    <div class="kpi-top"><div class="kpi-lbl">Trực lễ đêm</div><div class="kpi-icon">🌙</div></div>
-    <div class="kpi-val">${totHLN}</div>
-    <div class="kpi-desc">lượt đăng ký</div>
-  </div>
+  <div class="kpi blue"><div class="kpi-top"><div class="kpi-lbl">Tổng ca trực</div><div class="kpi-icon">📅</div></div><div class="kpi-val">${totCa}</div><div class="kpi-desc">ca trong tháng</div></div>
+  <div class="kpi gold"><div class="kpi-top"><div class="kpi-lbl">Tổng giờ làm</div><div class="kpi-icon">⏱️</div></div><div class="kpi-val">${totH.toFixed(1)}</div><div class="kpi-desc">giờ hiệu lực</div></div>
+  <div class="kpi green"><div class="kpi-top"><div class="kpi-lbl">Công quy đổi</div><div class="kpi-icon">✅</div></div><div class="kpi-val">${totC.toFixed(2)}</div><div class="kpi-desc">÷ ${std}h/ngày</div></div>
+  <div class="kpi red"><div class="kpi-top"><div class="kpi-lbl">Trực lễ ngày</div><div class="kpi-icon">☀️</div></div><div class="kpi-val">${totHLD}</div><div class="kpi-desc">lượt đăng ký</div></div>
+  <div class="kpi teal"><div class="kpi-top"><div class="kpi-lbl">Trực lễ đêm</div><div class="kpi-icon">🌙</div></div><div class="kpi-val">${totHLN}</div><div class="kpi-desc">lượt đăng ký</div></div>
 </div>
-
-<!-- FORMULA -->
 <div class="formula-box">
   <strong>Quy tắc tính công:</strong> &nbsp;
-  Tối T2–T6 = <strong>4,5h</strong> &nbsp;|&nbsp;
-  Tối T7 = <strong>6h</strong> &nbsp;|&nbsp;
-  Tối CN = <strong>4,5h</strong> &nbsp;|&nbsp;
-  Ngày CN = <strong>${std}h</strong> (1 công chuẩn) &nbsp;|&nbsp;
-  Trực lễ ngày = <strong>8h × hệ số</strong> &nbsp;|&nbsp;
-  Trực lễ đêm = <strong>4,5h × hệ số</strong><br>
-  <strong>Ngày công</strong> = Tổng giờ hiệu lực ÷ ${std}h &nbsp;|&nbsp;
-  Giờ lễ được nhân hệ số (×1, ×1.5, ×2) theo thiết lập từng ngày
+  Tối T2–T6 = <strong>4,5h</strong> &nbsp;|&nbsp; Tối T7 = <strong>6h</strong> &nbsp;|&nbsp; Tối CN = <strong>4,5h</strong> &nbsp;|&nbsp; Ngày CN = <strong>${std}h</strong> &nbsp;|&nbsp;
+  Trực lễ ngày = <strong>8h × hệ số</strong> &nbsp;|&nbsp; Trực lễ đêm = <strong>4,5h × hệ số</strong><br>
+  <strong>Ngày công</strong> = Tổng giờ hiệu lực ÷ ${std}h
 </div>
-
-<!-- BẢNG CÔNG TỔNG HỢP -->
 <div class="sec-title"><div class="dot"></div>📊 Bảng Tổng Hợp Công – ${MN_VN[m-1]} ${y}</div>
 <div class="card">
 <table>
-<thead>
-<tr>
-  <th style="text-align:center">#</th>
-  <th>Họ và tên</th>
-  <th style="text-align:center">Tối T2–T6</th>
-  <th style="text-align:center">Tối T7</th>
-  <th style="text-align:center">Ngày CN</th>
-  <th style="text-align:center">Tối CN</th>
-  <th style="text-align:center">Lễ ngày</th>
-  <th style="text-align:center">Lễ đêm</th>
-  <th style="text-align:center">Tổng ca</th>
-  <th style="text-align:center">Tổng giờ</th>
-  <th style="text-align:center">Ngày công</th>
-</tr>
-</thead>
+<thead><tr><th style="text-align:center">#</th><th>Họ và tên</th><th style="text-align:center">Tối T2–T6</th><th style="text-align:center">Tối T7</th><th style="text-align:center">Ngày CN</th><th style="text-align:center">Tối CN</th><th style="text-align:center">Lễ ngày</th><th style="text-align:center">Lễ đêm</th><th style="text-align:center">Tổng ca</th><th style="text-align:center">Tổng giờ</th><th style="text-align:center">Ngày công</th></tr></thead>
 <tbody>
 ${rows.map(({n,r,i})=>`<tr>
-  <td class="stt">${i+1}</td>
-  <td class="name-cell">${n}</td>
+  <td class="stt">${i+1}</td><td class="name-cell">${n}</td>
   <td class="num">${r.nT?`<span class="pill ptoi">${r.nT} ca</span>`:'<span class="zero">—</span>'}</td>
   <td class="num">${r.n7?`<span class="pill pt7">${r.n7} ca</span>`:'<span class="zero">—</span>'}</td>
   <td class="num">${r.nC?`<span class="pill pcn">${r.nC} ca</span>`:'<span class="zero">—</span>'}</td>
@@ -2283,33 +2168,19 @@ ${rows.map(({n,r,i})=>`<tr>
 <tfoot>
 <tr class="tfoot-row">
   <td colspan="2" style="font-weight:900;font-size:13px">TỔNG CỘNG (${rows.length} KTV)</td>
-  <td class="num">${rows.reduce((s,r)=>s+r.r.nT,0)}</td>
-  <td class="num">${rows.reduce((s,r)=>s+r.r.n7,0)}</td>
-  <td class="num">${rows.reduce((s,r)=>s+r.r.nC,0)}</td>
-  <td class="num">${rows.reduce((s,r)=>s+r.r.nTC,0)}</td>
-  <td class="num">${totHLD}</td>
-  <td class="num">${totHLN}</td>
-  <td class="num" style="font-size:14px">${totCa}</td>
-  <td class="num">${totH.toFixed(1)}h</td>
+  <td class="num">${rows.reduce((s,r)=>s+r.r.nT,0)}</td><td class="num">${rows.reduce((s,r)=>s+r.r.n7,0)}</td>
+  <td class="num">${rows.reduce((s,r)=>s+r.r.nC,0)}</td><td class="num">${rows.reduce((s,r)=>s+r.r.nTC,0)}</td>
+  <td class="num">${totHLD}</td><td class="num">${totHLN}</td>
+  <td class="num" style="font-size:14px">${totCa}</td><td class="num">${totH.toFixed(1)}h</td>
   <td class="num" style="font-size:15px;color:#16a34a">${totC.toFixed(2)}</td>
 </tr>
 </tfoot>
 </table>
 </div>
-
-<!-- CHI TIẾT TỪNG KTV -->
 <div class="sec-title"><div class="dot" style="background:#16a34a"></div>👤 Chi Tiết Từng Kỹ Thuật Viên</div>
 <div class="card">
 <table>
-<thead>
-<tr>
-  <th style="width:32px;text-align:center">#</th>
-  <th>Họ và tên</th>
-  <th style="text-align:center;width:90px">Tổng giờ</th>
-  <th style="text-align:center;width:90px">Ngày công</th>
-  <th>Chi tiết ca</th>
-</tr>
-</thead>
+<thead><tr><th style="width:32px;text-align:center">#</th><th>Họ và tên</th><th style="text-align:center;width:90px">Tổng giờ</th><th style="text-align:center;width:90px">Ngày công</th><th>Chi tiết ca</th></tr></thead>
 <tbody>
 ${rows.map(({n,r,i})=>{
   let parts=[];
@@ -2319,29 +2190,15 @@ ${rows.map(({n,r,i})=>{
   if(r.nTC) parts.push(`<span class="pill ptoicn">🌙 ${r.nTC} tối CN (${(r.nTC*4.5).toFixed(1)}h)</span>`);
   if(r.nHLDay) parts.push(`<span class="pill phl-d">☀️ ${r.nHLDay} lễ ngày (${r.hlDayH.toFixed(0)}h×hệ số)</span>`);
   if(r.nHLNight) parts.push(`<span class="pill phl-n">🌙 ${r.nHLNight} lễ đêm (${r.hlNightH.toFixed(1)}h×hệ số)</span>`);
-  return `<tr>
-    <td class="stt">${i+1}</td>
-    <td class="name-cell">${n}</td>
-    <td class="num">${r.h.toFixed(1)}h</td>
-    <td class="num"><span class="cong-big">${r.cong.toFixed(2)}</span></td>
-    <td style="font-size:12px">${parts.join(' ')||'<span style="color:#8ea5c0;font-style:italic">Chưa có ca trực</span>'}</td>
-  </tr>`;
+  return `<tr><td class="stt">${i+1}</td><td class="name-cell">${n}</td><td class="num">${r.h.toFixed(1)}h</td><td class="num"><span class="cong-big">${r.cong.toFixed(2)}</span></td><td style="font-size:12px">${parts.join(' ')||'<span style="color:#8ea5c0;font-style:italic">Chưa có ca trực</span>'}</td></tr>`;
 }).join('')}
 </tbody>
 </table>
 </div>
-
-<!-- LỊCH TRỰC CHI TIẾT THEO NGÀY -->
 <div class="sec-title"><div class="dot" style="background:#d97706"></div>📅 Lịch Trực Chi Tiết Theo Ngày</div>
 <div class="card">
 ${calRows.length ? `<table class="cal-table">
-<thead>
-<tr>
-  <th style="width:120px">Ngày</th>
-  <th style="width:80px">Loại ngày</th>
-  <th>Ca trực</th>
-</tr>
-</thead>
+<thead><tr><th style="width:120px">Ngày</th><th style="width:80px">Loại ngày</th><th>Ca trực</th></tr></thead>
 <tbody>
 ${calRows.map(({d,dw,ds,hl,nightStaff,dayStaff,sunDayStaff})=>{
   const dowCls=hl?'dow-hl':dw===0?'dow-cn':dw===6?'dow-t7':'dow-tx';
@@ -2350,18 +2207,12 @@ ${calRows.map(({d,dw,ds,hl,nightStaff,dayStaff,sunDayStaff})=>{
   if(dayStaff.length) shifts+=`<div style="margin-bottom:4px"><span style="font-size:10.5px;font-weight:800;color:#b45309;margin-right:4px">☀️ Trực ngày:</span>${dayStaff.map(n=>`<span class="shift-day">${n}</span>`).join('')}</div>`;
   if(sunDayStaff.length) shifts+=`<div style="margin-bottom:4px"><span style="font-size:10.5px;font-weight:800;color:#16a34a;margin-right:4px">☀️ Ngày CN:</span>${sunDayStaff.map(n=>`<span class="shift-cn">${n}</span>`).join('')}</div>`;
   if(nightStaff.length) shifts+=`<div><span style="font-size:10.5px;font-weight:800;color:#2a5aa4;margin-right:4px">${hl?'🌙 Trực đêm lễ:':'🌙 Ca tối:'}</span>${nightStaff.map(n=>`<span class="shift-night">${n}</span>`).join('')}</div>`;
-  return `<tr>
-    <td class="cal-date"><span class="cal-dow ${dowCls}">${['CN','T2','T3','T4','T5','T6','T7'][dw]}</span>${d}/${m}/${y}</td>
-    <td style="font-size:11.5px;font-weight:700">${typeLabel}${hl?`<br><span style="font-size:10px;color:#c0392b">${hl.name}</span>`:''}</td>
-    <td>${shifts}</td>
-  </tr>`;
+  return `<tr><td class="cal-date"><span class="cal-dow ${dowCls}">${DOW_LBL[dw]}</span>${d}/${m}/${y}</td><td style="font-size:11.5px;font-weight:700">${typeLabel}${hl?`<br><span style="font-size:10px;color:#c0392b">${hl.name}</span>`:''}</td><td>${shifts}</td></tr>`;
 }).join('')}
 </tbody>
 </table>` : '<div class="no-data">Chưa có ca trực nào được đăng ký trong tháng này.</div>'}
 </div>
-
 ${hlDates.length ? `
-<!-- NGÀY LỄ -->
 <div class="sec-title"><div class="dot" style="background:#dc2626"></div>🎌 Ngày Lễ Công Ty Trong Tháng</div>
 <div class="card">
 <table class="hl-table">
@@ -2376,31 +2227,17 @@ ${hlDates.map(({d,dw,ds,h:hl})=>{
   const dayEff=(8*parseFloat(mult)).toFixed(1);
   const nightEff=(4.5*parseFloat(mult)).toFixed(1);
   return `<tr>
-    <td><strong>${['CN','T2','T3','T4','T5','T6','T7'][dw]}, ${d}/${m}/${y}</strong><br><span style="font-size:12px;color:#c0392b;font-weight:700">${hl.name}</span></td>
+    <td><strong>${DOW_LBL[dw]}, ${d}/${m}/${y}</strong><br><span style="font-size:12px;color:#c0392b;font-weight:700">${hl.name}</span></td>
     <td><span class="hl-mult ${mCls}">×${mult}</span><br><span style="font-size:10.5px;color:#8ea5c0">${stdH}h=1 công</span></td>
-    <td style="font-size:12px">
-      ${dayReg.length
-        ? dayReg.map(n=>`<span class="shift-day">${n}</span>`).join('')+`<br><span style="font-size:10.5px;color:#b45309">${dayReg.length} người · ${dayEff}h/người</span>`
-        : '<span style="color:#8ea5c0;font-style:italic">Chưa có</span>'}
-    </td>
-    <td style="font-size:12px">
-      ${nightReg.length
-        ? nightReg.map(n=>`<span class="shift-night">${n}</span>`).join('')+`<br><span style="font-size:10.5px;color:#2a5aa4">${nightReg.length} người · ${nightEff}h/người</span>`
-        : '<span style="color:#8ea5c0;font-style:italic">Chưa có</span>'}
-    </td>
+    <td style="font-size:12px">${dayReg.length?dayReg.map(n=>`<span class="shift-day">${n}</span>`).join('')+`<br><span style="font-size:10.5px;color:#b45309">${dayReg.length} người · ${dayEff}h/người</span>`:'<span style="color:#8ea5c0;font-style:italic">Chưa có</span>'}</td>
+    <td style="font-size:12px">${nightReg.length?nightReg.map(n=>`<span class="shift-night">${n}</span>`).join('')+`<br><span style="font-size:10.5px;color:#2a5aa4">${nightReg.length} người · ${nightEff}h/người</span>`:'<span style="color:#8ea5c0;font-style:italic">Chưa có</span>'}</td>
   </tr>`;
 }).join('')}
 </tbody>
 </table>
 </div>` : ''}
-
-<!-- FOOTER -->
-<div class="rpt-footer">
-  Báo cáo được tạo tự động bởi Hệ thống Lịch Trực Đêm – Kỹ Thuật &nbsp;|&nbsp; ${printDate}<br>
-  Đây là tài liệu nội bộ, chỉ lưu hành trong phòng Kỹ Thuật
+<div class="rpt-footer">Báo cáo được tạo tự động bởi Hệ thống Lịch Trực Đêm – Kỹ Thuật &nbsp;|&nbsp; ${printDate}<br>Đây là tài liệu nội bộ, chỉ lưu hành trong phòng Kỹ Thuật</div>
 </div>
-
-</div><!-- /page -->
 </body></html>`;
 
   const blob=new Blob([html],{type:'text/html;charset=utf-8'});
