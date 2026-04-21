@@ -314,6 +314,7 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:var(--bg);color:var(--te
 .user-badge{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,0.14);border:1.5px solid rgba(255,255,255,0.28);border-radius:8px;padding:5px 12px;font-size:12.5px;font-weight:700;color:#fff}
 .role-dot{width:8px;height:8px;border-radius:50%;background:#86efac}
 .role-dot.admin{background:var(--gold)}
+.role-dot.vip{background:linear-gradient(135deg,#f4a31d,#e11d48);box-shadow:0 0 6px rgba(244,163,29,0.8)}
 .conn-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(22,163,74,0.18);border:1px solid rgba(22,163,74,0.35);border-radius:6px;padding:4px 9px;font-size:11px;font-weight:700;color:#86efac}
 .conn-dot{width:5px;height:5px;border-radius:50%;background:#4ade80;animation:sdBlink 2.5s ease-in-out infinite}
 .hdr-actions{display:flex;gap:7px}
@@ -335,6 +336,7 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:var(--bg);color:var(--te
 .perm-banner.warn{background:var(--gold-l);border:1.5px solid var(--gold-m);color:var(--amber)}
 .perm-banner.locked{background:var(--red-l);border-color:#fca5a5;color:var(--red)}
 .perm-banner.ok{background:var(--green-l);border:1.5px solid var(--green-m);color:var(--green)}
+.perm-banner.vip{background:linear-gradient(90deg,#fef7e8,#fff1f2);border:1.5px solid var(--gold-m);color:var(--amber)}
 
 /* ── CARDS ── */
 .card{background:var(--white);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);margin-bottom:18px}
@@ -390,9 +392,12 @@ td.dc.c-toi{background:#e8f0fc}
 td.dc.c-t7{background:#fef9c3}
 td.dc.c-toicn{background:var(--teal-l)}
 td.dc.c-holiday-truc{background:#ffd6d6}
+/* Past cells – KTV: faded; Admin: slightly dimmed but still editable */
 td.dc.past{opacity:.42;filter:grayscale(.4)}
 td.dc.past.off{background:#f1f4f9!important}
 td.dc.past:hover{background:inherit!important;cursor:default!important}
+td.dc.past.admin-editable{opacity:.72;filter:none;cursor:pointer!important}
+td.dc.past.admin-editable:hover{background:var(--blue-l)!important}
 td.dc.today-col{outline:2px solid var(--gold);outline-offset:-2px;position:relative;z-index:2}
 td.dc.today-col.off{background:#fef9ee!important}
 td.dc.today-col:hover{background:#fef3d0!important}
@@ -445,7 +450,6 @@ tbody.rows tr:nth-child(even) td.dc.vt7.off{background:#fffbeb}
 .hl-shift-header{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;font-size:12.5px;font-weight:800;gap:10px;flex-wrap:wrap}
 .hl-shift-header.day-shift{background:#fffbeb;border-bottom:1.5px solid #fde68a;color:#b45309}
 .hl-shift-header.night-shift{background:#eef3fb;border-bottom:1.5px solid var(--blue-m);color:var(--blue-d)}
-.hl-shift-info{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .hl-shift-count{font-size:11.5px;font-weight:700;color:var(--text3)}
 .hl-shift-count.has-ppl{color:#c0392b}
 .hl-staff-row{display:flex;flex-wrap:wrap;gap:8px;padding:10px 14px}
@@ -486,16 +490,22 @@ table.st tfoot td{background:var(--blue-l);font-weight:800;color:var(--blue);bor
 .acc-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px;box-shadow:var(--sh);display:flex;flex-direction:column;gap:10px}
 .acc-card.admin-card{border-top:4px solid var(--blue)}
 .acc-card.staff-card{border-top:4px solid var(--green)}
+/* VIP account styling */
+.acc-card.vip-card{border-top:4px solid var(--gold);background:linear-gradient(135deg,#fff,#fef7e8);box-shadow:0 4px 20px rgba(244,163,29,0.18)}
+.vip-crown{display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,var(--gold-l),#fff1c4);border:1.5px solid var(--gold-m);border-radius:8px;padding:3px 9px;font-size:11px;font-weight:800;color:var(--amber)}
 .acc-header{display:flex;align-items:center;gap:10px}
 .acc-avatar{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#fff;flex-shrink:0}
 .acc-avatar.av-admin{background:linear-gradient(135deg,var(--blue),var(--blue-d))}
 .acc-avatar.av-staff{background:linear-gradient(135deg,var(--green),#15803d)}
+.acc-avatar.av-vip{background:linear-gradient(135deg,var(--gold),var(--gold-d));box-shadow:0 2px 10px rgba(244,163,29,0.4)}
 .acc-info{flex:1;min-width:0}
 .acc-name{font-size:14px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .acc-role{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
-.acc-role.r-admin{color:var(--blue)}.acc-role.r-staff{color:var(--green)}
+.acc-role.r-admin{color:var(--blue)}.acc-role.r-staff{color:var(--green)}.acc-role.r-vip{color:var(--amber)}
 .acc-meta{font-size:12px;color:var(--text3);display:flex;gap:8px;font-weight:600}
 .acc-actions{display:flex;gap:6px;flex-wrap:wrap}
+/* Protected/locked account badge */
+.acc-protected{display:inline-flex;align-items:center;gap:4px;background:#fef9c3;border:1px solid var(--gold-m);border-radius:6px;padding:4px 10px;font-size:11.5px;font-weight:700;color:#92400e;width:100%;justify-content:center}
 
 /* ── HOLIDAY MANAGEMENT ── */
 .holiday-list{display:flex;flex-direction:column;gap:10px}
@@ -531,7 +541,7 @@ table.st tfoot td{background:var(--blue-l);font-weight:800;color:var(--blue);bor
 .modal-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
 .mult-selector{display:flex;gap:8px}
-.mult-btn{flex:1;padding:10px 8px;border:2px solid var(--border2);border-radius:10px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;background:var(--surface);color:var(--text2);transition:all .15s;text-align:center}
+.mult-btn{flex:1;padding:10px 8px;border:2px solid var(--border2);border-radius:10px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;background:var(--surface);color:var(--text2);transition:all .15px;text-align:center}
 .mult-btn:hover{border-color:var(--blue-m);background:var(--blue-l);color:var(--blue)}
 .mult-btn.sel-x1{border-color:var(--green);background:var(--green-l);color:var(--green)}
 .mult-btn.sel-x15{border-color:var(--gold);background:var(--gold-l);color:var(--amber)}
@@ -930,7 +940,6 @@ table.st tfoot td{background:var(--blue-l);font-weight:800;color:var(--blue);bor
 // DIALOG & TOAST SYSTEM
 // ============================================================
 let _dialogResolve = null;
-let _dialogBarTimer = null;
 
 function _showDialog({icon='ℹ️', iconCls='ic-info', title='', msg='', actions=[], inputLabel='', inputDefault='', inputType='text'}){
   return new Promise(resolve=>{
@@ -957,7 +966,7 @@ function _showDialog({icon='ℹ️', iconCls='ic-info', title='', msg='', action
     actEl.innerHTML='';
     actions.forEach(a=>{
       const btn=document.createElement('button');
-      btn.className='btn '+( a.cls||'');
+      btn.className='btn '+(a.cls||'');
       btn.textContent=a.label;
       btn.onclick=()=>_closeDialog(a.value !== undefined ? a.value : a.label);
       actEl.appendChild(btn);
@@ -1023,10 +1032,23 @@ function showToast(msg, type='info', duration=3200){
 }
 
 // ============================================================
-// ✅ FIX: Khai báo DOW_LBL và MN ở đây (global scope)
+// CONSTANTS
 // ============================================================
 const MN = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
 const DOW_LBL = ['CN','T2','T3','T4','T5','T6','T7'];
+
+// ============================================================
+// VIP ACCOUNT CONFIG
+// ============================================================
+const VIP_ACCOUNT_ID = 'acc_admin'; // Tài khoản VIP không thể bị sửa/xóa bởi admin khác
+
+function isVipAccount(id){ return id === VIP_ACCOUNT_ID; }
+function canManageAccount(targetId){
+  // Chỉ VIP account mới có thể sửa/xóa chính VIP account
+  // Admin khác không được động vào VIP account
+  if(isVipAccount(targetId)) return currentUser && currentUser.id === VIP_ACCOUNT_ID;
+  return isAdmin();
+}
 
 window._staff = [];
 window._accounts = [];
@@ -1079,6 +1101,7 @@ window._onFirebaseReady = function() {
 // PERMISSION HELPERS
 // ============================================================
 function isAdmin(){return currentUser&&currentUser.role==='admin'}
+function isVipUser(){return currentUser&&currentUser.id===VIP_ACCOUNT_ID}
 function myStaffLink(){return currentUser?currentUser.staffLink:null}
 function todayInfo(){const t=new Date();return{todayY:t.getFullYear(),todayM:t.getMonth()+1,todayD:t.getDate()}}
 function isPastDay(m,y,d){const{todayY,todayM,todayD}=todayInfo();if(y<todayY)return true;if(y===todayY&&m<todayM)return true;if(y===todayY&&m===todayM&&d<todayD)return true;return false}
@@ -1099,12 +1122,29 @@ function canEditMonth(m,y){
   return false;
 }
 
-function canEditCell(n,m,y,d){if(isPastDay(m,y,d))return false;if(isAdmin())return true;if(!canEditMonth(m,y))return false;return n===myStaffLink()}
-function canEditSunDay(n,m,y,d){if(isPastDay(m,y,d))return false;if(isAdmin())return true;if(!canEditMonth(m,y))return false;return n===myStaffLink()}
-function canEditHlReg(n,m,y,d){if(isPastDay(m,y,d))return false;if(isAdmin())return true;if(!canEditMonth(m,y))return false;return n===myStaffLink()}
+// ── QUAN TRỌNG: Admin có thể sửa ô ngày quá khứ, KTV thì không ──
+function canEditCell(n,m,y,d){
+  if(isAdmin()) return true; // Admin bypass tất cả, kể cả ngày quá khứ
+  if(isPastDay(m,y,d)) return false;
+  if(!canEditMonth(m,y)) return false;
+  return n===myStaffLink();
+}
+function canEditSunDay(n,m,y,d){
+  if(isAdmin()) return true; // Admin bypass past
+  if(isPastDay(m,y,d)) return false;
+  if(!canEditMonth(m,y)) return false;
+  return n===myStaffLink();
+}
+function canEditHlReg(n,m,y,d){
+  if(isAdmin()) return true; // Admin bypass past
+  if(isPastDay(m,y,d)) return false;
+  if(!canEditMonth(m,y)) return false;
+  return n===myStaffLink();
+}
 
 function getPermBannerHtml(m,y){
-  if(isAdmin())return '';
+  if(isVipUser()) return`<div class="perm-banner vip">👑 <strong>Tài khoản VIP</strong> – Toàn quyền chỉnh sửa mọi tháng, kể cả ngày đã qua.</div>`;
+  if(isAdmin()) return`<div class="perm-banner vip" style="background:var(--blue-l);border-color:var(--blue-m);color:var(--blue)">🔑 <strong>Admin</strong> – Có thể chỉnh sửa ngày đã qua trong tháng này.</div>`;
   if(!canEditMonth(m,y)){
     const today=new Date();const todayM=today.getMonth()+1,todayY=today.getFullYear(),todayD=today.getDate();
     if(y<todayY||(y===todayY&&m<todayM))return`<div class="perm-banner locked">🔒 Tháng ${m}/${y} đã qua – Chỉ xem.</div>`;
@@ -1210,8 +1250,10 @@ function doLogout(){
 }
 
 function initApp(){
-  document.getElementById('userBadgeName').textContent=currentUser.name+(currentUser.role==='admin'?' (Admin)':'');
-  document.getElementById('roleDot').className='role-dot'+(currentUser.role==='admin'?' admin':'');
+  const isVip = isVipUser();
+  document.getElementById('userBadgeName').textContent = currentUser.name + (isVip?' 👑':(currentUser.role==='admin'?' (Admin)':''));
+  const dot = document.getElementById('roleDot');
+  dot.className = 'role-dot' + (isVip?' vip':(currentUser.role==='admin'?' admin':''));
   document.querySelectorAll('[data-admin-only]').forEach(t=>{
     if(isAdmin())t.classList.add('show');else t.classList.remove('show');
   });
@@ -1359,6 +1401,8 @@ function patchCell(n,d,dw,type,m,y){
   const hl=getHolidayForDate(y,m,d);
   const ds=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
   const isNightHl=hl&&isHlNightReg(m,y,ds,n);
+  const past=isPastDay(m,y,d);
+  const adminEditable=isAdmin()&&past;
   el.className='dc';
   if(dw===0)el.classList.add('vcn');if(dw===6)el.classList.add('vt7');
   if(hl)el.classList.add('c-holiday-truc');
@@ -1368,8 +1412,12 @@ function patchCell(n,d,dw,type,m,y){
     else if(type==='toicn')el.classList.add('c-toicn');
     else el.classList.add('off');
   }
-  if(isPastDay(m,y,d)){el.classList.add('past');el.classList.add('no-edit')}
-  else if(isTodayDay(m,y,d))el.classList.add('today-col');
+  if(past){
+    if(adminEditable) el.classList.add('past','admin-editable');
+    else {el.classList.add('past','no-edit');}
+  } else if(isTodayDay(m,y,d)){
+    el.classList.add('today-col');
+  }
   if(!canEditCell(n,m,y,d))el.classList.add('no-edit');
   let inner='';
   if(hl){
@@ -1431,6 +1479,7 @@ function renderMatrix(){
       const editable=canEditCell(n,m,y,d);
       const past=isPastDay(m,y,d);
       const today=isTodayDay(m,y,d);
+      const adminEditable=isAdmin()&&past;
       let cls='dc';
       if(dw===0)cls+=' vcn';if(dw===6)cls+=' vt7';
       if(hl)cls+=' c-holiday-truc';
@@ -1438,8 +1487,13 @@ function renderMatrix(){
         if(type==='toi')cls+=' c-toi';else if(type==='t7')cls+=' c-t7';else if(type==='toicn')cls+=' c-toicn';
         else cls+=' off';
       }
-      if(past)cls+=' past no-edit';else if(today)cls+=' today-col';
-      if(!editable)cls+=' no-edit';
+      if(past){
+        if(adminEditable) cls+=' past admin-editable';
+        else cls+=' past no-edit';
+      } else if(today){
+        cls+=' today-col';
+      }
+      if(!editable) cls+=' no-edit';
       let inner='';
       if(hl){
         if(isNightHl) inner=`<div class="chk toicn" style="font-size:10px">🌙✓</div>`;
@@ -1448,7 +1502,8 @@ function renderMatrix(){
         inner=`<div class="chk ${type}">✓</div>`;
       }
       const esc=n.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-      const onclick=editable&&!past?`onclick="toggle('${esc}',${d},${dw})"`:'';
+      // Admin có thể click kể cả ngày quá khứ
+      const onclick=editable?`onclick="toggle('${esc}',${d},${dw})"`:'';
       h+=`<td id="${cellId(n,d)}" class="${cls}" ${onclick}>${inner}</td>`;
     });
     h+='</tr>';
@@ -1477,9 +1532,11 @@ function renderSunList(){
       const today=isTodayDay(m,y,d);
       const hl=getHolidayForDate(y,m,d);
       const rowCls=today?'today-sun':'';
-      const pastLabel=past?`<span style="font-size:10px;color:var(--text3);font-weight:600">(đã qua)</span>`:'';
+      // Admin vẫn thấy ngày qua nhưng có thể click
+      const pastLabel=past&&!isAdmin()?`<span style="font-size:10px;color:var(--text3);font-weight:600">(đã qua)</span>`:(past&&isAdmin()?`<span style="font-size:10px;color:var(--amber);font-weight:700">(đã qua – Admin)</span>`:'');
       const todayLabel=today?`<span style="font-size:10px;color:var(--gold);font-weight:800">● Hôm nay</span>`:'';
-      html+=`<div class="sun-row ${rowCls}" style="${past?'opacity:.55':''}">
+      const rowStyle=past&&!isAdmin()?'opacity:.55':'';
+      html+=`<div class="sun-row ${rowCls}" style="${rowStyle}">
         <div class="sun-date">
           <span class="badge">CN, ${d}/${m}</span>
           ${todayLabel}${pastLabel}
@@ -1518,6 +1575,9 @@ function renderHlReg(){
   let html='';
   hlDates.forEach(({d,ds,dw,h:hl})=>{
     const past=isPastDay(m,y,d);
+    // Admin có thể sửa ngày lễ đã qua, KTV thì không
+    const rowStyle=past&&!isAdmin()?'opacity:.55':'';
+    const pastNote=past&&isAdmin()?`<span style="font-size:10.5px;color:var(--amber);font-weight:700;margin-left:8px">⚠️ Ngày đã qua – Admin chỉnh sửa</span>`:'';
     const mult=hl.mult||'1.5';
     const stdH=parseFloat(hl.stdHours||'8');
     const multVal=parseFloat(mult);
@@ -1530,11 +1590,11 @@ function renderHlReg(){
     const registeredNight=getHlNightRegForDate(m,y,ds);
     const registeredDay=getHlDayRegForDate(m,y,ds);
 
-    html+=`<div class="hl-day-block" style="${past?'opacity:.55':''}">
+    html+=`<div class="hl-day-block" style="${rowStyle}">
       <div class="hl-day-meta">
         <div class="hl-day-date">${DOW_LBL[dw]}, ${d}/${m}/${y}</div>
         <div class="hl-day-info">
-          <div class="hl-day-name">🎌 ${hl.name}</div>
+          <div class="hl-day-name">🎌 ${hl.name}${pastNote}</div>
           <div class="hl-day-time">
             <span class="hl-mult-badge ${multCls[mult]||'mult-x15'}">💰 Hệ số ${multLabel[mult]||'×'+mult}</span>
             <span style="font-size:12px;color:var(--text2);font-weight:600">Quy đổi: ${stdH}h = 1 công</span>
@@ -1556,7 +1616,7 @@ function renderHlReg(){
     window._staff.forEach(n=>{
       if(isStaffLocked(n))return;
       const isReg=registeredDay.includes(n);
-      const editable=canEditHlReg(n,m,y,d)&&!past;
+      const editable=canEditHlReg(n,m,y,d);
       const esc=n.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
       const escd=ds.replace(/'/g,"\\'");
       const onclick=editable?`onclick="toggleHlDayReg('${esc}','${escd}')"`:'';
@@ -1578,7 +1638,7 @@ function renderHlReg(){
     window._staff.forEach(n=>{
       if(isStaffLocked(n))return;
       const isReg=registeredNight.includes(n);
-      const editable=canEditHlReg(n,m,y,d)&&!past;
+      const editable=canEditHlReg(n,m,y,d);
       const esc=n.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
       const escd=ds.replace(/'/g,"\\'");
       const onclick=editable?`onclick="toggleHlNightReg('${esc}','${escd}')"`:'';
@@ -1876,7 +1936,34 @@ async function deleteStaff(idx){
 // ============================================================
 function renderAccounts(){
   document.getElementById('accGrid').innerHTML=window._accounts.map(a=>{
-    const ia=a.role==='admin';const isSelf=a.id===currentUser.id;
+    const ia=a.role==='admin';
+    const isVip=isVipAccount(a.id);
+    const isSelf=a.id===currentUser.id;
+    const canManage=canManageAccount(a.id);
+
+    // VIP account card
+    if(isVip){
+      return`<div class="acc-card vip-card">
+        <div class="acc-header">
+          <div class="acc-avatar av-vip">👑</div>
+          <div class="acc-info">
+            <div class="acc-name">${a.name}${isSelf?' <span style="font-size:11px;color:var(--blue)">(Bạn)</span>':''}</div>
+            <div class="acc-role r-vip">👑 VIP – Quản Trị Viên Cao Cấp</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <span class="vip-crown">👑 Tài khoản VIP</span>
+        </div>
+        <div class="acc-meta"><span>👤 ${a.username}</span>${a.staffLink?`<span>🔗 ${a.staffLink}</span>`:''}</div>
+        <div class="acc-actions">
+          ${canManage?`
+            <button class="btn btn-sm btn-gold" onclick="openEditAccount('${a.id}')">✏️ Sửa</button>
+            <button class="btn btn-sm" onclick="openPwdModal('${a.id}')">🔒 MK</button>
+          `:`<div class="acc-protected">🔒 Chỉ tài khoản VIP mới có thể chỉnh sửa</div>`}
+        </div>
+      </div>`;
+    }
+
     return`<div class="acc-card ${ia?'admin-card':'staff-card'}">
       <div class="acc-header">
         <div class="acc-avatar ${ia?'av-admin':'av-staff'}">${a.name.charAt(0)}</div>
@@ -1914,6 +2001,11 @@ function openAddAccount(){
   updateRoleUI();document.getElementById('modalAcc').classList.remove('hidden');
 }
 function openEditAccount(id){
+  // Kiểm tra quyền VIP
+  if(isVipAccount(id) && !isVipUser()){
+    dlgAlert('Tài khoản VIP chỉ có thể được chỉnh sửa bởi chính chủ tài khoản đó!',{title:'Không có quyền',icon:'🔒',iconCls:'ic-danger'});
+    return;
+  }
   const acc=window._accounts.find(a=>a.id===id);if(!acc)return;
   editAccId=id;
   document.getElementById('modalAccTitle').textContent='✏️ Sửa Tài Khoản';
@@ -1921,7 +2013,14 @@ function openEditAccount(id){
   document.getElementById('mAccUser').value=acc.username;
   document.getElementById('mAccUser').disabled=true;
   document.getElementById('mAccPass').value='';
-  document.getElementById('mAccRole').value=acc.role;
+  // VIP account không thể đổi role
+  const roleField=document.getElementById('mAccRoleField');
+  if(isVipAccount(id)){
+    roleField.style.display='none'; // ẩn dropdown role cho VIP
+  } else {
+    roleField.style.display='';
+    document.getElementById('mAccRole').value=acc.role;
+  }
   populateStaffSelect();document.getElementById('mAccStaff').value=acc.staffLink||'';
   updateRoleUI();document.getElementById('modalAcc').classList.remove('hidden');
 }
@@ -1929,7 +2028,9 @@ async function saveAccount(){
   const name=document.getElementById('mAccName').value.trim();
   const username=document.getElementById('mAccUser').value.trim();
   const pass=document.getElementById('mAccPass').value;
-  const role=document.getElementById('mAccRole').value;
+  const isEditingVip=editAccId&&isVipAccount(editAccId);
+  // Role cho VIP luôn là admin, không thay đổi
+  const role=isEditingVip?'admin':document.getElementById('mAccRole').value;
   const staffLink=role==='staff'?(document.getElementById('mAccStaff').value||null):null;
   if(!name||!username){await dlgAlert('Vui lòng nhập đầy đủ họ tên và tên đăng nhập!',{title:'Thiếu thông tin',icon:'⚠️',iconCls:'ic-warn'});return}
   if(!editAccId&&!pass){await dlgAlert('Vui lòng nhập mật khẩu!',{title:'Thiếu mật khẩu',icon:'🔒',iconCls:'ic-warn'});return}
@@ -1937,7 +2038,9 @@ async function saveAccount(){
   if(editAccId){
     const acc=window._accounts.find(a=>a.id===editAccId);if(!acc)return;
     acc.name=name;acc.role=role;acc.staffLink=staffLink;if(pass)acc.password=pass;
-    if(currentUser.id===editAccId){currentUser.name=name;currentUser.role=role;currentUser.staffLink=staffLink;document.getElementById('userBadgeName').textContent=name+(role==='admin'?' (Admin)':'')}
+    if(currentUser.id===editAccId){currentUser.name=name;currentUser.role=role;currentUser.staffLink=staffLink;
+      document.getElementById('userBadgeName').textContent=name+(isVipUser()?' 👑':(role==='admin'?' (Admin)':''));
+    }
     if(window._saveAccountDoc)await window._saveAccountDoc(acc);
   } else {
     const newAcc={id:'acc_'+Date.now(),username,password:pass,name,role,staffLink};
@@ -1948,6 +2051,11 @@ async function saveAccount(){
   showToast(editAccId?'Đã cập nhật tài khoản':'Đã thêm tài khoản mới','success');
 }
 async function deleteAccount(id){
+  // Không thể xóa VIP account
+  if(isVipAccount(id)){
+    await dlgAlert('Tài khoản VIP không thể bị xóa!',{title:'Không thể xóa',icon:'👑',iconCls:'ic-danger'});
+    return;
+  }
   if(id===currentUser.id){await dlgAlert('Không thể xóa tài khoản đang đăng nhập!',{title:'Không thể xóa',icon:'🚫',iconCls:'ic-danger'});return}
   const acc=window._accounts.find(a=>a.id===id);if(!acc)return;
   const ok=await dlgConfirmDanger(`Xóa tài khoản <strong>"${acc.name}"</strong>?<br><span style="font-size:12px;color:var(--text3)">Thao tác này không thể hoàn tác.</span>`,{title:'Xóa tài khoản',okLabel:'Xóa'});
@@ -1959,9 +2067,15 @@ async function deleteAccount(id){
 }
 function closeModal(id){document.getElementById(id).classList.add('hidden')}
 function openPwdModal(id){
+  // Kiểm tra quyền VIP
+  if(isVipAccount(id) && !isVipUser()){
+    dlgAlert('Chỉ tài khoản VIP mới có thể đổi mật khẩu của mình!',{title:'Không có quyền',icon:'🔒',iconCls:'ic-danger'});
+    return;
+  }
   pwdAccId=id;
   const acc=window._accounts.find(a=>a.id===id);
-  document.getElementById('pwdTarget').textContent=acc?`${acc.name} (${acc.username})`:'';
+  const vipLabel=isVipAccount(id)?' 👑 VIP':'';
+  document.getElementById('pwdTarget').textContent=acc?`${acc.name}${vipLabel} (${acc.username})`:'';
   ['newPwd1','newPwd2'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('pwdErr').classList.remove('show');
   document.getElementById('modalPwd').classList.remove('hidden');
