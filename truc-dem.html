@@ -675,7 +675,7 @@ table.st tfoot td{background:var(--blue-l);font-weight:800;color:var(--blue);bor
     <div style="padding:14px 20px;background:linear-gradient(90deg,#c0392b,#e74c3c);border-radius:13px 13px 0 0">
       <div style="font-size:15px;font-weight:900;color:#fff">🎌 Đăng Ký Trực Ngày Nghỉ Lễ</div>
       <div style="font-size:12px;color:rgba(255,255,255,0.85);margin-top:3px">
-        ☀️ <strong>Trực ngày</strong> (07:30–16:30): tính công 8h × hệ số &nbsp;|&nbsp;
+        ☀️ <strong>Trực ngày</strong> (07:30–15:30): tính công 8h × hệ số &nbsp;|&nbsp;
         🌙 <strong>Trực đêm</strong> (17:30–22:00): tính 4,5h × hệ số
       </div>
     </div>
@@ -1651,7 +1651,7 @@ function renderHlReg(){
       <div class="hl-shift-section">
         <div class="hl-shift-header day-shift">
           <div class="hl-shift-info">
-            <span>☀️ Trực ngày &nbsp;07:30 – 16:30</span>
+            <span>☀️ Trực ngày &nbsp;07:30 – 17:30</span>
             <span class="hl-time-badge">8h × ${mult} = ${dayEffH}h = <strong>${dayCong} công</strong></span>
           </div>
           <span class="hl-shift-count ${registeredDay.length?'has-ppl':''}">
@@ -1765,7 +1765,7 @@ function renderStat(){
   document.getElementById('fBox').innerHTML=`
     <strong>Công thức:</strong><br>
     • Tối T2–T6 = 4,5h &nbsp;|&nbsp; Tối T7 = 6h &nbsp;|&nbsp; Tối CN = 4,5h &nbsp;|&nbsp; Ngày CN = ${std}h<br>
-    • <strong>Trực lễ ngày</strong> (07:30–16:30) = 8h × Hệ số &nbsp;|&nbsp; <strong>Trực lễ đêm</strong> (17:30–22:00) = 4,5h × Hệ số<br>
+    • <strong>Trực lễ ngày</strong> (07:30–17:30) = 8h × Hệ số &nbsp;|&nbsp; <strong>Trực lễ đêm</strong> (17:30–22:00) = 4,5h × Hệ số<br>
     • Ngày công = Tổng giờ hiệu lực ÷ ${std}h<br><br>
     ${fls.join('<br>') || '<em style="color:var(--text3)">Chưa có dữ liệu.</em>'}`;
 }
