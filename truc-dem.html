@@ -716,6 +716,9 @@ td.dc.cell-active .chk { color: #fff !important; }
       <button class="hbtn" onclick="exportHTMLReport()" title="Xuất báo cáo HTML đẹp">📊 Báo cáo</button>
       <button class="btn btn-green" onclick="exportExcel()" title="Xuất Excel">📊 Excel</button>
       <button class="hbtn" onclick="window.print()">In</button>
+      <button class="hbtn" onclick="openMyIconPicker()" id="btnMyIcon" title="Đổi icon của bạn" style="display:none">
+        <span id="myIconPreview">✓</span> Icon
+      </button>
       <button class="hbtn logout" onclick="doLogout()">🚪 Đăng xuất</button>
     </div>
   </div>
@@ -1438,6 +1441,7 @@ function initApp(){
   ssEl.style.opacity = '0.5';
   ssEl.style.cursor = 'not-allowed';
 }
+  updateMyIconBtn();
   renderAll();
 }
 
@@ -3128,11 +3132,22 @@ ${upcomingHL.length?`
 }
 
   const ICON_CATS = {
-  'Ký hiệu':   ['✅','☑️','💯','🎯','⚡','🔥','💎','🌟','👑','🏆','🎪','💠'],
-  'Kỹ thuật':  ['🔧','🔩','🔌','💡','⚙️','🛠️','📡','🔬','💻','🖥️','📟','🔋'],
-  'Thiên nhiên':['🌸','🌺','🌻','🍀','🌿','🌊','🌙','☀️','❄️','🌈','🌴','🍁'],
-  'Động vật':  ['🦁','🐯','🦊','🦅','🦉','🐉','🦋','🐬','🦈','🦎','🦚','🦜'],
-  'Hình học':  ['⬛','🔷','🔶','🟥','🟩','🟦','🟪','🟨','🔘','🔲','💠','🔹'],
+  'Ký hiệu':     ['💯','🎯','🏆','👑','💎','🌟','⭐','✨','🔥','⚡','💥','🌀',
+                  '💠','🎪','🎭','🎲','🃏','🔑','🛡️','🎖️','🏅','🎗️','🔮','🧿'],
+  'Kỹ thuật':    ['🔧','🔩','🔌','💡','⚙️','🛠️','📡','🔬','💻','🖥️','📟','🔋',
+                  '🖨️','⌨️','🖱️','📺','📷','🎥','📻','🔭','🧪','🧲','⚗️','🔐'],
+  'Thiên nhiên': ['🌸','🌺','🌻','🌹','🍀','🌿','🍃','🌊','🌙','☀️','⛅','🌈',
+                  '❄️','🌴','🌵','🍁','🌾','🌋','⛰️','🌏','🌍','☁️','🌤️','🌦️'],
+  'Động vật':    ['🦁','🐯','🐻','🦊','🐺','🦅','🦉','🐉','🦋','🐬','🦈','🦎',
+                  '🦚','🦜','🐧','🦝','🦔','🦕','🦖','🐊','🦂','🐙','🦑','🐲'],
+  'Hình học':    ['⬛','⬜','🔷','🔶','🔹','🔸','🟥','🟧','🟨','🟩','🟦','🟪',
+                  '🔴','🟠','🟡','🔲','🔳','▪️','◾','💠','🔵','🟤','⚫','⚪'],
+  'Thể thao':    ['⚽','🏀','🏈','⚾','🎾','🏐','🎱','🏓','🏸','🥊','🥋','🎽',
+                  '🛹','🏋️','🤸','⛷️','🏊','🚴','🤺','🥇','🥈','🥉','🏆','🎿'],
+  'Mặt & người': ['😎','🤩','😈','👿','🤖','👾','🎃','💀','👻','🤡','🦸','🦹',
+                  '🧙','🧟','🧛','🥷','🤠','🫡','🦄','🐲','🎅','🧑‍🚀','👨‍🔧','🧑‍🔬'],
+  'Du lịch':     ['✈️','🚀','🛸','🚗','🏎️','🚂','⛵','🚁','🏝️','🗼','🗽','🏰',
+                  '🎡','🎢','🌃','🌆','🌉','🧭','🗺️','⛺','🏕️','🌄','🎑','🏔️'],
 };
 
 let _iconPickerStaff = null;
@@ -3163,19 +3178,40 @@ function switchIconCat(cat) {
 }
 
 function renderIconGrid() {
-  const current = window._iconMap?.[_iconPickerStaff] || '✓';
-  document.getElementById('iconCurrentPreview').textContent = current;
-  document.getElementById('iconPickerGrid').innerHTML = 
-    ICON_CATS[_iconActiveCat].map(ic => `
-      <div onclick="selectIcon('${ic}')" title="${ic}"
-        style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;
-          font-size:22px;border:${ic===current?'2px solid var(--blue)':'1px solid var(--border2)'};
-          border-radius:8px;cursor:pointer;background:${ic===current?'var(--blue-l)':'var(--surface)'};
-          transition:all .12s"
-        onmouseover="this.style.background='var(--blue-l)'"
-        onmouseout="this.style.background='${ic===current?'var(--blue-l)':'var(--surface)'}'"
-      >${ic}</div>
-    `).join('');
+  const current = window._iconMap?.[_iconPickerStaff] || null;
+  document.getElementById('iconCurrentPreview').textContent = current || '✓ (mặc định)';
+  const grid = document.getElementById('iconPickerGrid');
+  grid.innerHTML = '';
+
+  // Ô reset về mặc định
+  const resetDiv = document.createElement('div');
+  resetDiv.title = 'Về mặc định ✓';
+  resetDiv.style.cssText = `width:44px;height:44px;display:flex;align-items:center;
+    justify-content:center;font-size:14px;font-weight:900;border-radius:8px;cursor:pointer;
+    transition:all .12s;color:var(--text2);
+    border:${!current ? '2px solid var(--blue)' : '1px solid var(--border2)'};
+    background:${!current ? 'var(--blue-l)' : 'var(--surface)'}`;
+  resetDiv.textContent = '✓';
+  resetDiv.onclick = () => resetIcon();
+  resetDiv.onmouseenter = () => { resetDiv.style.background = 'var(--blue-l)'; };
+  resetDiv.onmouseleave = () => { resetDiv.style.background = !current ? 'var(--blue-l)' : 'var(--surface)'; };
+  grid.appendChild(resetDiv);
+
+  ICON_CATS[_iconActiveCat].forEach(ic => {
+    const div = document.createElement('div');
+    div.textContent = ic;
+    div.title = ic;
+    const isActive = ic === current;
+    div.style.cssText = `width:44px;height:44px;display:flex;align-items:center;
+      justify-content:center;font-size:22px;border-radius:8px;cursor:pointer;
+      transition:all .12s;
+      border:${isActive ? '2px solid var(--blue)' : '1px solid var(--border2)'};
+      background:${isActive ? 'var(--blue-l)' : 'var(--surface)'}`;
+    div.onmouseenter = () => { div.style.background = 'var(--blue-l)'; div.style.transform = 'scale(1.1)'; };
+    div.onmouseleave = () => { div.style.background = isActive ? 'var(--blue-l)' : 'var(--surface)'; div.style.transform = 'scale(1)'; };
+    div.onclick = () => selectIcon(ic);
+    grid.appendChild(div);
+  });
 }
 
 function selectIcon(ic) {
@@ -3185,8 +3221,70 @@ function selectIcon(ic) {
   if (window._saveIconMap) window._saveIconMap();
   renderIconGrid();
   renderStaff();
-  renderAll();
+  // Cập nhật matrix real-time không cần rebuild toàn bộ
+  _patchAllCellsIcon(_iconPickerStaff);
+  updateMyIconBtn();
   showToast(`Đã đặt icon ${ic} cho ${_iconPickerStaff}`, 'success');
+}
+
+function resetIcon() {
+  if (!_iconPickerStaff) return;
+  if (window._iconMap) delete window._iconMap[_iconPickerStaff];
+  if (window._saveIconMap) window._saveIconMap();
+  renderIconGrid();
+  renderStaff();
+  _patchAllCellsIcon(_iconPickerStaff);
+  updateMyIconBtn();
+  showToast('Đã về icon mặc định ✓', 'info');
+}
+
+function _patchAllCellsIcon(name) {
+  const m = gM(), y = gY();
+  const days = daysIn(y, m);
+  const icon = window._iconMap?.[name] || '✓';
+  for (let d = 1; d <= days; d++) {
+    const td = document.getElementById(cellId(name, d));
+    if (!td) continue;
+    const chk = td.querySelector('.chk');
+    if (!chk) continue;
+    if (chk.classList.contains('toi') ||
+        chk.classList.contains('t7') ||
+        chk.classList.contains('toicn')) {
+      chk.textContent = icon;
+    }
+    if (chk.classList.contains('toicn') && chk.style.fontSize === '13px') {
+      chk.textContent = '🌙' + icon;
+    }
+  }
+}
+
+  function openMyIconPicker() {
+  const link = myStaffLink();
+  if (!link) {
+    dlgAlert('Tài khoản chưa liên kết KTV. Liên hệ Admin.',
+      { title: 'Chưa liên kết', icon: '⚠️', iconCls: 'ic-warn' });
+    return;
+  }
+  const idx = window._staff.indexOf(link);
+  if (idx < 0) {
+    dlgAlert('Không tìm thấy KTV trong danh sách.',
+      { title: 'Lỗi', icon: '❌', iconCls: 'ic-danger' });
+    return;
+  }
+  openIconPicker(idx);
+}
+
+function updateMyIconBtn() {
+  const link = myStaffLink();
+  const btn = document.getElementById('btnMyIcon');
+  const preview = document.getElementById('myIconPreview');
+  if (!btn) return;
+  if (link) {
+    btn.style.display = '';
+    if (preview) preview.textContent = window._iconMap?.[link] || '✓';
+  } else {
+    btn.style.display = 'none';
+  }
 }
 </script>
   <div class="modal-bg hidden" id="modalIcon">
