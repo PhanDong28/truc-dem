@@ -386,9 +386,9 @@ td.dc.c-toi{background:#e8f0fc}
 td.dc.c-t7{background:#fef9c3}
 td.dc.c-toicn{background:var(--teal-l)}
 td.dc.c-holiday-truc{background:#ffd6d6}
-td.dc.past{opacity:.42;filter:grayscale(.4)}
-td.dc.past.off{background:#f1f4f9!important}
-td.dc.past:hover{background:inherit!important;cursor:default!important}
+td.dc.past { opacity: .72; filter: grayscale(.15); }
+td.dc.past.off { background: #e8ecf4 !important; }
+td.dc.past:not(.admin-editable):hover { background: inherit !important; cursor: default !important; }
 td.dc.past.admin-editable{opacity:.72;filter:none;cursor:pointer!important}
 td.dc.past.admin-editable:hover{background:var(--blue-l)!important}
 td.dc.today-col{outline:2px solid var(--gold);outline-offset:-2px;position:relative;z-index:2}
@@ -574,16 +574,29 @@ table.st tfoot td{background:var(--blue-l);font-weight:800;color:var(--blue);bor
 }
 
   /* Highlight hàng khi hover trong matrix */
+/* ── Highlight hàng + cột khi hover ── */
 tbody.rows tr:hover td.nm {
   background: var(--blue-l) !important;
   color: var(--blue);
+  font-weight: 800;
 }
-tbody.rows tr:hover td.dc.off { background: rgba(42,90,164,0.06) !important; }
-tbody.rows tr:hover td.dc.c-toi { background: #c8d9f7 !important; }
-tbody.rows tr:hover td.dc.c-t7 { background: #fef08a !important; }
-tbody.rows tr:hover td.dc.c-toicn { background: #99f6e4 !important; }
-tbody.rows tr:hover td.dc.c-holiday-truc { background: #ffb3b3 !important; }
-tbody.rows tr:hover td.dc.past.off { background: rgba(42,90,164,0.06) !important; }
+tbody.rows tr:hover td.dc { filter: brightness(0.93); }
+tbody.rows tr:hover td.dc.off { background: rgba(42,90,164,0.08) !important; }
+tbody.rows tr:hover td.dc.c-toi { background: #b3c8f5 !important; }
+tbody.rows tr:hover td.dc.c-t7  { background: #fde68a !important; }
+tbody.rows tr:hover td.dc.c-toicn { background: #5eead4 !important; }
+tbody.rows tr:hover td.dc.c-holiday-truc { background: #ffa0a0 !important; }
+
+/* Highlight cột khi hover từng ô */
+td.dc:hover {
+  outline: 2px solid var(--blue) !important;
+  outline-offset: -2px;
+  z-index: 3;
+  position: relative;
+}
+td.dc.c-holiday-truc:hover { outline-color: #c0392b !important; }
+td.dc.c-t7:hover  { outline-color: var(--amber) !important; }
+td.dc.c-toicn:hover { outline-color: var(--teal) !important; }
 </style>
 </head>
 <body>
