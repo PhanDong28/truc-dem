@@ -672,12 +672,18 @@ td.dc.cell-active .chk { color: #fff !important; }
   <div class="card">
     <div class="card-head">
       <div class="toolbar">
-        <div class="fld"><label>Tháng</label><select id="sM" onchange="onMonthYearChange()"></select></div>
-        <div class="fld"><label>Năm</label><input type="number" id="sY" value="2026" min="2020" max="2035" onchange="onMonthYearChange()"></div>
-        <div class="fld"><label>Giờ chuẩn/ngày</label><input type="number" id="sS" value="8" min="1" max="24" onchange="renderAll()"></div>
-        <button class="btn btn-red" id="btnClear" onclick="clearMonth()">🗑 Xóa tháng</button>
+        <div class="fld"><label>Tháng</label>
+        <div style="display:flex;align-items:center;gap:4px">
+          <button class="btn" onclick="stepMonth(-1)" style="padding:0 10px;height:36px;font-size:18px;line-height:1">‹</button>
+          <select id="sM" onchange="onMonthYearChange()"></select>
+          <button class="btn" onclick="stepMonth(1)" style="padding:0 10px;height:36px;font-size:18px;line-height:1">›</button>
+        </div>
       </div>
-    </div>
+          <div class="fld"><label>Năm</label><input type="number" id="sY" value="2026" min="2020" max="2035" onchange="onMonthYearChange()"></div>
+            <div class="fld"><label>Giờ chuẩn/ngày</label><input type="number" id="sS" value="8" min="1" max="24" onchange="renderAll()"></div>
+              <button class="btn btn-red" id="btnClear" onclick="clearMonth()">🗑 Xóa tháng</button>
+            </div>
+          </div>
     <div style="padding:14px 20px 4px;font-size:15px;font-weight:900;color:var(--text);border-bottom:1px solid var(--border)">🌙 Bảng Trực Ca Tối</div>
     <div style="padding:10px 20px 0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
       <div style="font-size:12px;color:var(--text3)">Nhấn ô để đánh dấu KTV trực ca tối. Ô 🎌 là ngày lễ – nhấn để đăng ký trực đêm lễ.</div>
@@ -715,8 +721,14 @@ td.dc.cell-active .chk { color: #fff !important; }
   <div class="card">
     <div class="card-head">
       <div class="toolbar">
-        <div class="fld"><label>Tháng</label><select id="sM2" onchange="renderStat()"></select></div>
-        <div class="fld"><label>Năm</label><input type="number" id="sY2" value="2026" min="2020" max="2035" onchange="renderStat()"></div>
+        <div class="fld"><label>Tháng</label>
+  <div style="display:flex;align-items:center;gap:4px">
+    <button class="btn" onclick="stepMonth2(-1)" style="padding:0 10px;height:36px;font-size:18px;line-height:1">‹</button>
+    <select id="sM2" onchange="renderStat()"></select>
+    <button class="btn" onclick="stepMonth2(1)" style="padding:0 10px;height:36px;font-size:18px;line-height:1">›</button>
+  </div>
+</div>
+<div class="fld"><label>Năm</label><input type="number" id="sY2" value="2026" min="2020" max="2035" onchange="renderStat()"></div>
         <div class="fld"><label>Giờ chuẩn/ngày</label><input type="number" id="sS2" value="8" min="1" max="24" onchange="renderStat()"></div>
         <button class="btn btn-primary" onclick="exportHTMLReport()">📊 Xuất báo cáo</button>
         <button class="btn btn-green" onclick="exportCSV()">📥 CSV</button>
@@ -1509,7 +1521,8 @@ function renderMatrix(){
 
   window._staff.forEach(n=>{
     if(isStaffLocked(n)) return;
-    h += `<tr><td class="nm">${n}</td>`;
+   const isSelf = myStaffLink() && n.trim() === myStaffLink().trim();
+h += `<td class="nm" style="${isSelf ? 'background:linear-gradient(90deg,#fef7e8,#fff);color:var(--amber);font-weight:900;border-right:3px solid var(--gold);' : ''}">${isSelf ? '⭐ ' + n : n}</td>`;
     dates.forEach(({d,dw})=>{
       const hl = getHolidayForDate(y,m,d);
       const ds = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
@@ -2060,8 +2073,8 @@ function renderAccounts(){
   }).join('');
 }
 function updateRoleUI(){
-  const role = document.getElementById('mAccRole').value;
-  document.getElementById('mAccStaffField').style.display = role==='staff' ? '' : 'none';
+  // Luôn hiện ô liên kết KTV cho cả admin lẫn staff
+  document.getElementById('mAccStaffField').style.display = '';
 }
 function populateStaffSelect(){
   document.getElementById('mAccStaff').innerHTML =
@@ -2106,7 +2119,7 @@ async function saveAccount(){
   const pass = document.getElementById('mAccPass').value;
   const isEditingVip = editAccId && isVipAccount(editAccId);
   const role = isEditingVip ? 'admin' : document.getElementById('mAccRole').value;
-  const staffLink = role==='staff' ? (document.getElementById('mAccStaff').value||null) : null;
+  const staffLink = document.getElementById('mAccStaff').value || null;
   if(!name||!username){ await dlgAlert('Vui lòng nhập đầy đủ họ tên và tên đăng nhập!',{title:'Thiếu thông tin',icon:'⚠️',iconCls:'ic-warn'}); return; }
   if(!editAccId&&!pass){ await dlgAlert('Vui lòng nhập mật khẩu!',{title:'Thiếu mật khẩu',icon:'🔒',iconCls:'ic-warn'}); return; }
   if(!editAccId&&window._accounts.find(a=>a.username===username)){ await dlgAlert(`Tên đăng nhập <strong>"${username}"</strong> đã tồn tại!`,{title:'Trùng username',icon:'⚠️',iconCls:'ic-warn'}); return; }
@@ -2315,6 +2328,22 @@ function clearCrosshair() {
   wrap.querySelectorAll('tr.row-hover').forEach(r => r.classList.remove('row-hover'));
   wrap.querySelectorAll('.col-hover').forEach(c => c.classList.remove('col-hover'));
   wrap.querySelectorAll('.cell-active').forEach(c => c.classList.remove('cell-active'));
+}
+  function stepMonth(delta) {
+  let m = gM() + delta, y = gY();
+  if (m > 12) { m = 1; y++; }
+  if (m < 1)  { m = 12; y--; }
+  document.getElementById('sM').value = m;
+  document.getElementById('sY').value = y;
+  onMonthYearChange();
+}
+function stepMonth2(delta) {
+  let m = gM2() + delta, y = gY2();
+  if (m > 12) { m = 1; y++; }
+  if (m < 1)  { m = 12; y--; }
+  document.getElementById('sM2').value = m;
+  document.getElementById('sY2').value = y;
+  renderStat();
 }
 </script>
 </body>
