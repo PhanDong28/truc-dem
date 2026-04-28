@@ -10,7 +10,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, getDocs, deleteDoc, addDoc, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDBgdQjwmjHO1_r5eVXr30LbmkXSXZsGmA",
@@ -228,6 +228,24 @@ window._saveStaffList = saveStaffList;
 window._saveAccountDoc = saveAccountDoc;
 window._deleteAccountDoc = deleteAccountDoc;
 window._saveHolidays = saveHolidays;
+  async function writeLog(logObj) {
+  try {
+    await addDoc(collection(db, 'changelog'), { ...logObj, ts: Date.now() });
+  } catch(e) { console.warn('Log error:', e); }
+}
+async function fetchLogs(limitN=200) {
+  try {
+    const q = query(collection(db,'changelog'), orderBy('ts','desc'), limit(limitN));
+    const snap = await getDocs(q);
+    return snap.docs.map(d=>({id:d.id,...d.data()}));
+  } catch(e){ return []; }
+}
+async function deleteLogDoc(id){
+  await deleteDoc(doc(db,'changelog',id));
+}
+window._writeLog     = writeLog;
+window._fetchLogs    = fetchLogs;
+window._deleteLogDoc = deleteLogDoc;
 window._startRealtimeListeners = startRealtimeListeners;
 window._bootstrapIfNeeded = bootstrapIfNeeded;
 window._loadAllFromFirebase = loadAllFromFirebase;
@@ -312,6 +330,7 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:var(--bg);color:var(--te
 .user-badge{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,0.14);border:1.5px solid rgba(255,255,255,0.28);border-radius:8px;padding:5px 12px;font-size:12.5px;font-weight:700;color:#fff}
 .role-dot{width:8px;height:8px;border-radius:50%;background:#86efac}
 .role-dot.admin{background:var(--gold)}
+.role-dot.hncs{background:var(--purple)}
 .role-dot.vip{background:linear-gradient(135deg,#f4a31d,#e11d48);box-shadow:0 0 6px rgba(244,163,29,0.8)}
 .conn-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(22,163,74,0.18);border:1px solid rgba(22,163,74,0.35);border-radius:6px;padding:4px 9px;font-size:11px;font-weight:700;color:#86efac}
 .conn-dot{width:5px;height:5px;border-radius:50%;background:#4ade80;animation:sdBlink 2.5s ease-in-out infinite}
@@ -489,6 +508,9 @@ table.st tfoot td{background:var(--blue-l);font-weight:800;color:var(--blue);bor
 .acc-name{font-size:14px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .acc-role{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
 .acc-role.r-admin{color:var(--blue)}.acc-role.r-staff{color:var(--green)}.acc-role.r-vip{color:var(--amber)}
+.acc-role.r-hncs{color:var(--purple)}
+.acc-card.hncs-card{border-top:4px solid var(--purple)}
+.acc-avatar.av-hncs{background:linear-gradient(135deg,var(--purple),#6d28d9)}
 .acc-meta{font-size:12px;color:var(--text3);display:flex;gap:8px;font-weight:600}
 .acc-actions{display:flex;gap:6px;flex-wrap:wrap}
 .acc-protected{display:inline-flex;align-items:center;gap:4px;background:#fef9c3;border:1px solid var(--gold-m);border-radius:6px;padding:4px 10px;font-size:11.5px;font-weight:700;color:#92400e;width:100%;justify-content:center}
@@ -663,6 +685,7 @@ td.dc.cell-active .chk { color: #fff !important; }
   <button class="tab" id="tabHoliday" onclick="switchTab('t5',this)" data-admin-only>🎌 Ngày Nghỉ Lễ</button>
   <button class="tab" id="tabStaff" onclick="switchTab('t3',this)" data-admin-only>👥 Quản Lý KTV</button>
   <button class="tab" id="tabAcc" onclick="switchTab('t4',this)" data-admin-only>🔑 Tài Khoản</button>
+  <button class="tab" id="tabLog" onclick="switchTab('t6',this)" data-superadmin-only style="display:none">📋 Lịch Sử</button>
 </nav>
 
 <div class="main">
@@ -809,7 +832,48 @@ td.dc.cell-active .chk { color: #fff !important; }
 
 </div>
 </div>
-
+<div id="t6" class="panel">
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <div style="font-size:15px;font-weight:900;color:var(--text)">📋 Lịch Sử Chỉnh Sửa</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px">Chỉ Super Admin (👑) xem được</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+        <div class="fld">
+          <label>Lọc KTV</label>
+          <select id="logFilterStaff" onchange="loadAndRenderLog()" style="height:36px;padding:0 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-family:inherit;font-size:13px;font-weight:600;color:var(--text);background:var(--surface);outline:none;min-width:160px">
+            <option value="">-- Tất cả KTV --</option>
+          </select>
+        </div>
+        <div class="fld">
+          <label>Loại thao tác</label>
+          <select id="logFilterAction" onchange="renderLog()" style="height:36px;padding:0 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-family:inherit;font-size:13px;font-weight:600;color:var(--text);background:var(--surface);outline:none">
+            <option value="">-- Tất cả --</option>
+            <option value="ca_toi">🌙 Ca tối</option>
+            <option value="ca_ngay_cn">☀️ Ca ngày CN</option>
+            <option value="le_dem">🎌 Lễ đêm</option>
+            <option value="le_ngay">🎌 Lễ ngày</option>
+          </select>
+        </div>
+        <div class="fld">
+          <label>Người thực hiện</label>
+          <select id="logFilterUser" onchange="renderLog()" style="height:36px;padding:0 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-family:inherit;font-size:13px;font-weight:600;color:var(--text);background:var(--surface);outline:none;min-width:160px">
+            <option value="">-- Tất cả --</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="loadAndRenderLog()">🔄 Tải lại</button>
+        <button class="btn btn-red" onclick="clearOldLogs()">🗑 Xóa &gt;90 ngày</button>
+      </div>
+    </div>
+    <div id="logStats" style="padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;font-weight:700;color:var(--text2)"></div>
+    <div class="card-body" id="logBody">
+      <div style="text-align:center;padding:40px;color:var(--text3);font-size:13px;font-weight:600">
+        Nhấn <strong>Tải lại</strong> để xem lịch sử chỉnh sửa
+      </div>
+    </div>
+  </div>
+</div>
 <!-- Modal Add/Edit Account -->
 <div class="modal-bg hidden" id="modalAcc">
   <div class="modal">
@@ -819,9 +883,10 @@ td.dc.cell-active .chk { color: #fff !important; }
     <div class="modal-field"><label>Mật khẩu</label><input type="password" id="mAccPass" placeholder="••••••••"></div>
     <div class="modal-field" id="mAccRoleField">
       <label>Vai trò</label>
-      <select id="mAccRole" onchange="updateRoleUI()">
+     <select id="mAccRole" onchange="updateRoleUI()">
         <option value="staff">👤 Nhân viên (KTV)</option>
         <option value="admin">🔑 Admin</option>
+        <option value="hncs">📊 Hành chính nhân sự </option>
       </select>
     </div>
     <div class="modal-field" id="mAccStaffField">
@@ -1072,6 +1137,7 @@ window._onFirebaseReady = function() {
 function isAdmin(){ return currentUser && currentUser.role === 'admin'; }
 function isVipUser(){ return currentUser && currentUser.id === VIP_ACCOUNT_ID; }
 function myStaffLink(){ return currentUser ? (currentUser.staffLink || null) : null; }
+function isHNCS(){ return currentUser && currentUser.role === 'hncs'; }  
 
 function todayInfo(){
   const t = new Date();
@@ -1136,6 +1202,7 @@ function canEditHlReg(n, m, y, d){
 function getPermBannerHtml(m, y){
   if(isVipUser()) return `<div class="perm-banner vip">👑 <strong>Tài khoản VIP</strong> – Toàn quyền chỉnh sửa mọi tháng, kể cả ngày đã qua.</div>`;
   if(isAdmin()) return `<div class="perm-banner vip" style="background:var(--blue-l);border-color:var(--blue-m);color:var(--blue)">🔑 <strong>Admin</strong> – Có thể chỉnh sửa ngày đã qua trong tháng này.</div>`;
+  if(isHNCS()) return `<div class="perm-banner" style="background:var(--purple-l);border:1.5px solid var(--purple-m);color:var(--purple)">📊 <strong>Hành chính nhân sự</strong> – Chỉ xem lịch trực và xuất báo cáo.</div>`;
   if(!canEditMonth(m, y)){
     const {todayY, todayM, todayD} = todayInfo();
     if(y < todayY || (y === todayY && m < todayM))
@@ -1186,6 +1253,12 @@ function toggleHlNightReg(n, ds){
   if(idx >= 0) arr.splice(idx,1); else arr.push(n);
   window._hlReg[k][ds] = arr;
   if(window._saveHlReg) window._saveHlReg(m, y);
+  if(window._writeLog) window._writeLog({
+    userId: currentUser.id, userName: currentUser.name,
+    action: 'le_dem', target: n,
+    detail: `${ds} – ${arr.includes(n)?'Đăng ký':'Hủy'} trực lễ đêm`,
+    before: null, after: arr.includes(n)||null, month:m, year:y
+  });
   // FIX: Chỉ cập nhật UI cần thiết, không re-render toàn bộ
   _updateHlRegUI(ds, 'night', m, y);
   _updateMatrixHlCell(n, d, m, y);
@@ -1207,6 +1280,12 @@ function toggleHlDayReg(n, ds){
   if(idx >= 0) arr.splice(idx,1); else arr.push(n);
   window._hlDayReg[k][ds] = arr;
   if(window._saveHlDayReg) window._saveHlDayReg(m, y);
+  if(window._writeLog) window._writeLog({
+    userId: currentUser.id, userName: currentUser.name,
+    action: 'le_ngay', target: n,
+    detail: `${ds} – ${arr.includes(n)?'Đăng ký':'Hủy'} trực lễ ngày`,
+    before: null, after: arr.includes(n)||null, month:m, year:y
+  });
   _updateHlRegUI(ds, 'day', m, y);
 }
 
@@ -1288,11 +1367,13 @@ function doLogout(){
 }
 function initApp(){
   const isVip = isVipUser();
-  document.getElementById('userBadgeName').textContent = currentUser.name + (isVip?' 👑':(currentUser.role==='admin'?' (Admin)':''));
+  const roleLabel = isVip?' 👑':currentUser.role==='admin'?' (Admin)':currentUser.role==='hncs'?' (HNCS)':'';
+  document.getElementById('userBadgeName').textContent = currentUser.name + roleLabel;
   const dot = document.getElementById('roleDot');
-  dot.className = 'role-dot' + (isVip?' vip':(currentUser.role==='admin'?' admin':''));
-  document.querySelectorAll('[data-admin-only]').forEach(t=>{
-    if(isAdmin()) t.classList.add('show'); else t.classList.remove('show');
+  dot.className = 'role-dot' + (isVip?' vip':currentUser.role==='admin'?' admin':currentUser.role==='hncs'?' hncs':'');
+  // Tab lịch sử chỉ super admin
+  document.querySelectorAll('[data-superadmin-only]').forEach(t=>{
+    if(isVipUser()) t.style.display='flex'; else t.style.display='none';
   });
   document.getElementById('btnClear').style.display = isVipUser() ? '' : 'none';
   const now = new Date(), cm = now.getMonth()+1, cy = now.getFullYear();
@@ -1350,6 +1431,12 @@ function toggleSunDay(n, d){
   if(!window._attDay[k][n]) window._attDay[k][n]={};
   if(window._attDay[k][n][d]) delete window._attDay[k][n][d]; else window._attDay[k][n][d]=true;
   if(window._saveAttDay) window._saveAttDay(m,y);
+  if(window._writeLog) window._writeLog({
+    userId: currentUser.id, userName: currentUser.name,
+    action: 'ca_ngay_cn', target: n,
+    detail: `${d}/${m}/${y} – ${getCDay(m,y,n,d)?'Thêm':'Bỏ'} ca ngày CN`,
+    before: null, after: getCDay(m,y,n,d)||null, month:m, year:y
+  });
   // FIX: Chỉ update button tương ứng thay vì rebuild toàn bộ sunWrap
   const sunWrap = document.getElementById('sunWrap');
   const btn = sunWrap.querySelector(`button.s-btn[data-name="${encodeURIComponent(n)}"][data-d="${d}"]`);
@@ -1403,6 +1490,9 @@ function calcP(n, m, y, std){
 // ============================================================
 function switchTab(id, btn){
   if((id==='t3'||id==='t4'||id==='t5') && !isAdmin()) return;
+  if(id==='t2' && !isAdmin() && !isHNCS()) return;
+  if(id==='t6' && !isVipUser()) return;
+  if(id==='t6') loadAndRenderLog();
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
   document.getElementById(id).classList.add('active'); btn.classList.add('active');
@@ -1434,6 +1524,12 @@ function toggle(n, d, dw){
   setC(m, y, n, d, next);
   // FIX: chỉ update ô được click và hàng đếm
   patchCell(n, d, dw, next, m, y);
+  if(window._writeLog) window._writeLog({
+    userId: currentUser.id, userName: currentUser.name,
+    action: 'ca_toi', target: n,
+    detail: `${d}/${m}/${gY()} – ${next?'Thêm '+next:'Bỏ ca'}`,
+    before: cur||null, after: next||null, month:m, year:gY()
+  });
   patchCntRow(m, y);
 }
 
@@ -2055,12 +2151,12 @@ function renderAccounts(){
         </div>
       </div>`;
     }
-    return `<div class="acc-card ${ia?'admin-card':'staff-card'}">
+   return `<div class="acc-card ${a.role==='admin'?'admin-card':a.role==='hncs'?'hncs-card':'staff-card'}">
       <div class="acc-header">
-        <div class="acc-avatar ${ia?'av-admin':'av-staff'}">${a.name.charAt(0)}</div>
+        <div class="acc-avatar ${a.role==='admin'?'av-admin':a.role==='hncs'?'av-hncs':'av-staff'}">${a.name.charAt(0)}</div>
         <div class="acc-info">
           <div class="acc-name">${a.name}${isSelf?' <span style="font-size:11px;color:var(--blue)">(Bạn)</span>':''}</div>
-          <div class="acc-role ${ia?'r-admin':'r-staff'}">${ia?'🔑 Admin':'👤 Nhân viên'}</div>
+          <div class="acc-role ${a.role==='admin'?'r-admin':a.role==='hncs'?'r-hncs':'r-staff'}">${a.role==='admin'?'🔑 Admin':a.role==='hncs'?'📊 Hành chính NS':'👤 Nhân viên'}</div>
         </div>
       </div>
       <div class="acc-meta"><span>👤 ${a.username}</span>${a.staffLink?`<span>🔗 ${a.staffLink}</span>`:''}</div>
@@ -2344,6 +2440,111 @@ function stepMonth2(delta) {
   document.getElementById('sM2').value = m;
   document.getElementById('sY2').value = y;
   renderStat();
+}
+  // ============================================================
+// CHANGELOG – Super Admin only
+// ============================================================
+let _cachedLogs = [];
+
+async function loadAndRenderLog(){
+  if(!isVipUser()) return;
+  document.getElementById('logBody').innerHTML =
+    `<div style="text-align:center;padding:40px;color:var(--text3)">⏳ Đang tải lịch sử...</div>`;
+  document.getElementById('logStats').innerHTML = '';
+  _cachedLogs = await (window._fetchLogs ? window._fetchLogs(300) : Promise.resolve([]));
+
+  // Populate staff filter
+  const selStaff = document.getElementById('logFilterStaff');
+  const curStaff = selStaff.value;
+  selStaff.innerHTML = `<option value="">-- Tất cả KTV --</option>` +
+    window._staff.map(s=>`<option value="${s}" ${curStaff===s?'selected':''}>${s}</option>`).join('');
+
+  // Populate user filter
+  const users = [...new Set(_cachedLogs.map(l=>l.userName))].filter(Boolean).sort();
+  const selUser = document.getElementById('logFilterUser');
+  const curUser = selUser.value;
+  selUser.innerHTML = `<option value="">-- Tất cả --</option>` +
+    users.map(u=>`<option value="${u}" ${curUser===u?'selected':''}>${u}</option>`).join('');
+
+  renderLog();
+}
+
+function renderLog(){
+  if(!isVipUser()) return;
+  const filterAction = document.getElementById('logFilterAction').value;
+  const filterUser   = document.getElementById('logFilterUser').value;
+  const filterStaff  = document.getElementById('logFilterStaff').value;
+  let logs = _cachedLogs.slice();
+  if(filterAction) logs = logs.filter(l=>l.action===filterAction);
+  if(filterUser)   logs = logs.filter(l=>l.userName===filterUser);
+  if(filterStaff)  logs = logs.filter(l=>l.target===filterStaff);
+
+  // Stats bar
+  const byUser = {};
+  logs.forEach(l=>{ byUser[l.userName]=(byUser[l.userName]||0)+1; });
+  const topUser = Object.entries(byUser).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('logStats').innerHTML = `
+    <span>📊 Tổng: <strong style="color:var(--blue)">${logs.length}</strong> thao tác</span>
+    ${topUser?`<span>🏆 Nhiều nhất: <strong style="color:var(--amber)">${topUser[0]}</strong> (${topUser[1]} lần)</span>`:''}`;
+
+  if(!logs.length){
+    document.getElementById('logBody').innerHTML =
+      `<div style="text-align:center;padding:40px;color:var(--text3);font-weight:600">Không có dữ liệu phù hợp</div>`;
+    return;
+  }
+
+  const actionLabel = {ca_toi:'🌙 Ca tối',ca_ngay_cn:'☀️ Ngày CN',le_dem:'🎌 Lễ đêm',le_ngay:'🎌 Lễ ngày'};
+  const actionCls   = {ca_toi:'ptoi',ca_ngay_cn:'pcn',le_dem:'phl',le_ngay:'phl'};
+
+  document.getElementById('logBody').innerHTML =
+    `<div style="overflow-x:auto"><table class="st">
+      <thead><tr>
+        <th style="width:140px">Thời gian</th>
+        <th>Người thực hiện</th>
+        <th style="width:110px">Loại</th>
+        <th>KTV</th>
+        <th>Chi tiết</th>
+        <th style="width:80px;text-align:center">Kết quả</th>
+      </tr></thead>
+      <tbody>${logs.map(l=>{
+        const dt = new Date(l.ts);
+        const dtStr = `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}<br>
+          <span style="font-size:11px;color:var(--text3)">${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}</span>`;
+        const isAdd = l.after !== null && l.after !== undefined;
+        const isSelf = l.userName === l.target;
+        return `<tr>
+          <td style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">${dtStr}</td>
+          <td style="font-weight:800">${l.userName||'?'}</td>
+          <td><span class="pill ${actionCls[l.action]||''}">${actionLabel[l.action]||l.action}</span></td>
+          <td style="font-weight:700;color:${isSelf?'var(--text2)':'var(--blue)'}">${l.target||'—'}</td>
+          <td style="font-size:12.5px;color:var(--text2)">${l.detail||'—'}</td>
+          <td style="text-align:center">
+            <span style="display:inline-flex;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:800;
+              background:${isAdd?'var(--green-l)':'var(--red-l)'};color:${isAdd?'var(--green)':'var(--red)'}">
+              ${isAdd?'+ Thêm':'− Bỏ'}
+            </span>
+          </td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>`;
+}
+
+async function clearOldLogs(){
+  if(!isVipUser()) return;
+  const cutoff = Date.now() - 90*24*60*60*1000;
+  const oldLogs = _cachedLogs.filter(l=>l.ts < cutoff);
+  if(!oldLogs.length){ showToast('Không có log nào cũ hơn 90 ngày','info'); return; }
+  const ok = await dlgConfirmDanger(
+    `Xóa <strong>${oldLogs.length}</strong> log cũ hơn 90 ngày?`,
+    {title:'Xóa log cũ',okLabel:'Xóa'}
+  );
+  if(!ok) return;
+  let deleted=0;
+  for(const l of oldLogs){
+    try{ if(window._deleteLogDoc) await window._deleteLogDoc(l.id); deleted++; }catch(e){}
+  }
+  showToast(`Đã xóa ${deleted} log cũ`,'success');
+  await loadAndRenderLog();
 }
 </script>
 </body>
