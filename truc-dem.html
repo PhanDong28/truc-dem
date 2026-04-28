@@ -705,20 +705,20 @@ td.dc.cell-active .chk { color: #fff !important; }
     <div class="hdr-actions">
       <button class="hbtn" onclick="exportHTMLReport()" title="Xuất báo cáo HTML đẹp">📊 Báo cáo</button>
       <button class="btn btn-green" onclick="exportExcel()" title="Xuất Excel">📊 Excel</button>
-      <button class="hbtn" onclick="window.print()">🖨️ In</button>
+      <button class="hbtn" onclick="window.print()">In</button>
       <button class="hbtn logout" onclick="doLogout()">🚪 Đăng xuất</button>
     </div>
   </div>
 </div>
 
 <nav class="tabs">
-  <button class="tab active" onclick="switchTab('t1',this)">📅 Lịch Trực</button>
-  <button class="tab" onclick="switchTab('t0',this)">🏠 Tổng Quan</button>
-  <button class="tab" onclick="switchTab('t2',this)">📊 Thống Kê</button>
-  <button class="tab" id="tabHoliday" onclick="switchTab('t5',this)" data-admin-only>🎌 Ngày Nghỉ Lễ</button>
-  <button class="tab" id="tabStaff" onclick="switchTab('t3',this)" data-admin-only>👥 Quản Lý KTV</button>
-  <button class="tab" id="tabAcc" onclick="switchTab('t4',this)" data-admin-only>🔑 Tài Khoản</button>
-  <button class="tab" id="tabLog" onclick="switchTab('t6',this)" data-superadmin-only style="display:none">📋 Lịch Sử</button>
+  <button class="tab active" onclick="switchTab('t1',this)">Lịch Trực</button>
+  <button class="tab" onclick="switchTab('t0',this)">Tổng Quan</button>
+  <button class="tab" onclick="switchTab('t2',this)">Thống Kê</button>
+  <button class="tab" id="tabHoliday" onclick="switchTab('t5',this)" data-admin-only>Ngày Nghỉ Lễ</button>
+  <button class="tab" id="tabStaff" onclick="switchTab('t3',this)" data-admin-only>Quản Lý KTV</button>
+  <button class="tab" id="tabAcc" onclick="switchTab('t4',this)" data-admin-only>ài Khoản</button>
+  <button class="tab" id="tabLog" onclick="switchTab('t6',this)" data-superadmin-only style="display:none">Lịch Sử</button>
 </nav>
 
 <div class="main">
@@ -788,8 +788,8 @@ td.dc.cell-active .chk { color: #fff !important; }
 </div>
 <div class="fld"><label>Năm</label><input type="number" id="sY2" value="2026" min="2020" max="2035" onchange="renderStat()"></div>
         <div class="fld"><label>Giờ chuẩn/ngày</label><input type="number" id="sS2" value="8" min="1" max="24" onchange="renderStat()"></div>
-        <button class="btn btn-primary" onclick="exportHTMLReport()">📊 Xuất báo cáo</button>
-        <button class="btn btn-green" onclick="exportExcel()">📊 Xuất Excel</button>
+        <button class="btn btn-primary" onclick="exportHTMLReport()">Xuất báo cáo</button>
+        <button class="btn btn-green" onclick="exportExcel()">Xuất Excel</button>
       </div>
     </div>
     <div class="card-body">
@@ -834,7 +834,7 @@ td.dc.cell-active .chk { color: #fff !important; }
 <div id="t4" class="panel">
   <div class="card">
     <div class="card-head">
-      <div style="font-size:15px;font-weight:900;color:var(--text)">🔑 Quản Lý Tài Khoản</div>
+      <div style="font-size:15px;font-weight:900;color:var(--text)">Quản Lý Tài Khoản</div>
       <button class="btn btn-primary" onclick="openAddAccount()">➕ Thêm tài khoản</button>
     </div>
     <div class="card-body">
@@ -847,7 +847,7 @@ td.dc.cell-active .chk { color: #fff !important; }
   <div class="card">
     <div class="card-head">
       <div>
-        <div style="font-size:15px;font-weight:900;color:var(--text)">🎌 Lịch Nghỉ Lễ Công Ty</div>
+        <div style="font-size:15px;font-weight:900;color:var(--text)">Lịch Nghỉ Lễ Công Ty</div>
         <div style="font-size:12px;color:var(--text3);margin-top:3px">Thiết lập ngày nghỉ lễ và hệ số lương.</div>
       </div>
       <button class="btn btn-primary" onclick="openAddHoliday()">➕ Thêm ngày nghỉ</button>
@@ -871,8 +871,8 @@ td.dc.cell-active .chk { color: #fff !important; }
   <div class="card">
     <div class="card-head">
       <div>
-        <div style="font-size:15px;font-weight:900;color:var(--text)">📋 Lịch Sử Chỉnh Sửa</div>
-        <div style="font-size:12px;color:var(--text3);margin-top:2px">Chỉ Super Admin (👑) xem được</div>
+        <div style="font-size:15px;font-weight:900;color:var(--text)">Lịch Sử Chỉnh Sửa</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px">Chỉ Super Admin xem được</div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
         <div class="fld">
@@ -885,10 +885,10 @@ td.dc.cell-active .chk { color: #fff !important; }
           <label>Loại thao tác</label>
           <select id="logFilterAction" onchange="renderLog()" style="height:36px;padding:0 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-family:inherit;font-size:13px;font-weight:600;color:var(--text);background:var(--surface);outline:none">
             <option value="">-- Tất cả --</option>
-            <option value="ca_toi">🌙 Ca tối</option>
-            <option value="ca_ngay_cn">☀️ Ca ngày CN</option>
-            <option value="le_dem">🎌 Lễ đêm</option>
-            <option value="le_ngay">🎌 Lễ ngày</option>
+            <option value="ca_toi">Ca tối</option>
+            <option value="ca_ngay_cn">Ca ngày CN</option>
+            <option value="le_dem">Lễ đêm</option>
+            <option value="le_ngay">Lễ ngày</option>
           </select>
         </div>
         <div class="fld">
@@ -897,7 +897,7 @@ td.dc.cell-active .chk { color: #fff !important; }
             <option value="">-- Tất cả --</option>
           </select>
         </div>
-        <button class="btn btn-primary" onclick="loadAndRenderLog()">🔄 Tải lại</button>
+        <button class="btn btn-primary" onclick="loadAndRenderLog()">Tải lại</button>
         <button class="btn btn-red" onclick="clearOldLogs()">🗑 Xóa &gt;90 ngày</button>
       </div>
     </div>
@@ -919,9 +919,9 @@ td.dc.cell-active .chk { color: #fff !important; }
     <div class="modal-field" id="mAccRoleField">
       <label>Vai trò</label>
      <select id="mAccRole" onchange="updateRoleUI()">
-        <option value="staff">👤 Nhân viên (KTV)</option>
-        <option value="admin">🔑 Admin</option>
-        <option value="hncs">📊 Hành chính nhân sự </option>
+        <option value="staff">Nhân viên (KTV)</option>
+        <option value="admin">Admin</option>
+        <option value="hncs">Hành chính nhân sự </option>
       </select>
     </div>
     <div class="modal-field" id="mAccStaffField">
@@ -930,7 +930,7 @@ td.dc.cell-active .chk { color: #fff !important; }
     </div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('modalAcc')">Hủy</button>
-      <button class="btn btn-primary" onclick="saveAccount()">💾 Lưu</button>
+      <button class="btn btn-primary" onclick="saveAccount()">Lưu</button>
     </div>
   </div>
 </div>
@@ -938,14 +938,14 @@ td.dc.cell-active .chk { color: #fff !important; }
 <!-- Modal Change Password -->
 <div class="modal-bg hidden" id="modalPwd">
   <div class="modal">
-    <div class="modal-title">🔒 Đổi Mật Khẩu</div>
+    <div class="modal-title">Đổi Mật Khẩu</div>
     <div style="font-size:13px;color:var(--text2);margin-bottom:16px">Tài khoản: <strong id="pwdTarget"></strong></div>
     <div class="modal-field"><label>Mật khẩu mới</label><input type="password" id="newPwd1" placeholder="••••••••"></div>
     <div class="modal-field"><label>Xác nhận mật khẩu</label><input type="password" id="newPwd2" placeholder="••••••••" onkeydown="if(event.key==='Enter')savePwd()"></div>
     <div class="login-err" id="pwdErr" style="margin-top:8px">Mật khẩu không khớp!</div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('modalPwd')">Hủy</button>
-      <button class="btn btn-primary" onclick="savePwd()">💾 Cập nhật</button>
+      <button class="btn btn-primary" onclick="savePwd()">Cập nhật</button>
     </div>
   </div>
 </div>
@@ -953,7 +953,7 @@ td.dc.cell-active .chk { color: #fff !important; }
 <!-- Modal Add/Edit Holiday -->
 <div class="modal-bg hidden" id="modalHoliday">
   <div class="modal">
-    <div class="modal-title" id="modalHolidayTitle">🎌 Thêm Ngày Nghỉ Lễ</div>
+    <div class="modal-title" id="modalHolidayTitle">Thêm Ngày Nghỉ Lễ</div>
     <div class="modal-row">
       <div class="modal-field">
         <label>Ngày bắt đầu</label>
