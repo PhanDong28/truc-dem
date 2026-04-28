@@ -1627,8 +1627,9 @@ function patchCell(n, d, dw, type, m, y){
     if(isNightHl) inner=`<div class="chk toicn" style="font-size:10px">🌙✓</div>`;
     else inner=`<div class="chk hl">🎌</div>`;
   } else if(type){
-    inner=`<div class="chk ${type}">✓</div>`;
-  }
+    const ktvIcon = window._iconMap?.[n] || '✓';
+    inner=`<div class="chk ${type}">${ktvIcon}</div>`;
+}
   el.innerHTML = inner;
 }
 
@@ -3242,18 +3243,28 @@ function _patchAllCellsIcon(name) {
   const m = gM(), y = gY();
   const days = daysIn(y, m);
   const icon = window._iconMap?.[name] || '✓';
+
   for (let d = 1; d <= days; d++) {
     const td = document.getElementById(cellId(name, d));
     if (!td) continue;
-    const chk = td.querySelector('.chk');
-    if (!chk) continue;
-    if (chk.classList.contains('toi') ||
-        chk.classList.contains('t7') ||
-        chk.classList.contains('toicn')) {
-      chk.textContent = icon;
-    }
-    if (chk.classList.contains('toicn') && chk.style.fontSize === '13px') {
-      chk.textContent = '🌙' + icon;
+
+    const hl = getHolidayForDate(y, m, d);
+    const ds = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+
+    if (hl) {
+      // Ngày lễ: kiểm tra có đăng ký trực đêm không
+      const isNightHl = isHlNightReg(m, y, ds, name);
+      if (isNightHl) {
+        td.innerHTML = `<div class="chk toicn" style="font-size:14px">🌙${icon}</div>`;
+      }
+      // Nếu không đăng ký thì giữ 🎌, không thay đổi
+    } else {
+      // Ngày thường: lấy type từ data
+      const type = getC(m, y, name, d);
+      if (type) {
+        td.innerHTML = `<div class="chk ${type}">${icon}</div>`;
+      }
+      // Nếu không có ca thì ô trống, không thay đổi
     }
   }
 }
