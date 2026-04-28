@@ -620,7 +620,39 @@ td.dc.cell-active {
   z-index: 10;
 }
 td.dc.cell-active .chk { color: #fff !important; }
+
+  .dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;margin-bottom:20px}
+.dash-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);overflow:hidden}
+.dash-card-head{padding:12px 18px;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:900;border-bottom:1px solid var(--border)}
+.dash-card-head.blue{background:var(--blue);color:#fff}
+.dash-card-head.green{background:var(--green);color:#fff}
+.dash-card-head.gold{background:var(--gold);color:#fff}
+.dash-card-head.red{background:var(--red);color:#fff}
+.dash-card-head.teal{background:var(--teal);color:#fff}
+.dash-card-body{padding:14px 18px}
+.dash-staff-pill{display:inline-flex;align-items:center;gap:6px;background:var(--blue-l);border:1.5px solid var(--blue-m);border-radius:20px;padding:6px 14px;font-size:13px;font-weight:700;color:var(--blue);margin:4px}
+.dash-staff-pill.night{background:var(--blue-l);border-color:var(--blue-m);color:var(--blue)}
+.dash-staff-pill.day{background:var(--green-l);border-color:var(--green-m);color:var(--green)}
+.dash-staff-pill.holiday{background:#ffe4e1;border-color:#fca5a5;color:#c0392b}
+.dash-staff-pill.none{background:var(--surface);border-color:var(--border);color:var(--text3)}
+.dash-empty{padding:20px;text-align:center;color:var(--text3);font-size:13px;font-weight:600}
+.dash-week-row{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.dash-week-row:last-child{border-bottom:none}
+.dash-week-date{min-width:90px;font-size:12px;font-weight:800;color:var(--blue)}
+.dash-week-date .dow{font-size:11px;color:var(--text3);font-weight:600}
+.dash-unreg-item{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)}
+.dash-unreg-item:last-child{border-bottom:none}
+.dash-unreg-name{font-size:13px;font-weight:700;color:var(--text)}
+.dash-unreg-count{font-size:12px;font-weight:700;color:var(--text3)}
+.dash-unreg-count.low{color:var(--red)}
+.dash-unreg-count.ok{color:var(--green)}
+.dash-progress{height:6px;background:var(--border);border-radius:3px;margin-top:4px;overflow:hidden}
+.dash-progress-bar{height:100%;border-radius:3px;background:var(--blue);transition:width .4s}
+.dash-progress-bar.full{background:var(--green)}
+.dash-progress-bar.low{background:var(--red)}
+.today-highlight{background:linear-gradient(90deg,#fef9ee,#fff);border-left:4px solid var(--gold)!important}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -672,7 +704,7 @@ td.dc.cell-active .chk { color: #fff !important; }
     </div>
     <div class="hdr-actions">
       <button class="hbtn" onclick="exportHTMLReport()" title="Xuất báo cáo HTML đẹp">📊 Báo cáo</button>
-      <button class="hbtn" onclick="exportCSV()" title="Xuất CSV">📥 CSV</button>
+      <button class="btn btn-green" onclick="exportExcel()" title="Xuất Excel">📊 Excel</button>
       <button class="hbtn" onclick="window.print()">🖨️ In</button>
       <button class="hbtn logout" onclick="doLogout()">🚪 Đăng xuất</button>
     </div>
@@ -681,6 +713,7 @@ td.dc.cell-active .chk { color: #fff !important; }
 
 <nav class="tabs">
   <button class="tab active" onclick="switchTab('t1',this)">📅 Lịch Trực</button>
+  <button class="tab" onclick="switchTab('t0',this)">🏠 Tổng Quan</button>
   <button class="tab" onclick="switchTab('t2',this)">📊 Thống Kê</button>
   <button class="tab" id="tabHoliday" onclick="switchTab('t5',this)" data-admin-only>🎌 Ngày Nghỉ Lễ</button>
   <button class="tab" id="tabStaff" onclick="switchTab('t3',this)" data-admin-only>👥 Quản Lý KTV</button>
@@ -689,7 +722,9 @@ td.dc.cell-active .chk { color: #fff !important; }
 </nav>
 
 <div class="main">
-
+<div id="t0" class="panel">
+  <div id="dashWrap"></div>
+</div>
 <div id="t1" class="panel active">
   <div id="permBanner1"></div>
   <div class="card">
@@ -754,7 +789,7 @@ td.dc.cell-active .chk { color: #fff !important; }
 <div class="fld"><label>Năm</label><input type="number" id="sY2" value="2026" min="2020" max="2035" onchange="renderStat()"></div>
         <div class="fld"><label>Giờ chuẩn/ngày</label><input type="number" id="sS2" value="8" min="1" max="24" onchange="renderStat()"></div>
         <button class="btn btn-primary" onclick="exportHTMLReport()">📊 Xuất báo cáo</button>
-        <button class="btn btn-green" onclick="exportCSV()">📥 CSV</button>
+        <button class="btn btn-green" onclick="exportExcel()">📊 Xuất Excel</button>
       </div>
     </div>
     <div class="card-body">
@@ -1493,6 +1528,14 @@ function calcP(n, m, y, std){
 // TAB SWITCH
 // ============================================================
 function switchTab(id, btn){
+  if(id==='t0') { 
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+    document.getElementById('t0').classList.add('active'); 
+    btn.classList.add('active');
+    renderDashboard(); 
+    return; 
+  }
   if((id==='t3'||id==='t4'||id==='t5') && !isAdmin()) return;
   if(id==='t6' && !isVipUser()) return;
   if(id==='t6') loadAndRenderLog();
@@ -2313,19 +2356,236 @@ async function clearMonth(){
 // ============================================================
 // EXPORT
 // ============================================================
-function exportCSV(){
+function exportExcel(){
   const m=gM2()||gM(), y=gY2()||gY(), std=gStd2()||gStd();
   const es = isAdmin()
     ? window._staff.filter(n=>!isStaffLocked(n))
     : window._staff.filter(n=>n===myStaffLink()&&!isStaffLocked(n));
-  let csv = '\uFEFF';
-  csv += `BẢNG CÔNG KỸ THUẬT THÁNG ${m}/${y}\nGiờ chuẩn: ${std}h/ngày\n\n`;
-  csv += `STT,Họ và tên,Tối T2-T6,Tối T7,Ngày CN,Tối CN,Lễ ngày,Lễ đêm,Tổng ca,Tổng giờ,Ngày công\n`;
-  es.forEach((n,i)=>{ const r=calcP(n,m,y,std); csv+=`${i+1},"${n}",${r.nT},${r.n7},${r.nC},${r.nTC},${r.nHLDay},${r.nHLNight},${r.tot},${r.h.toFixed(1)},${r.cong.toFixed(2)}\n`; });
-  const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href=url; a.download=`cong_ky_thuat_T${m}_${y}.csv`; a.click(); URL.revokeObjectURL(url);
-  showToast('Đã xuất file CSV', 'success');
+  const now = new Date();
+  const MN_VN=['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6',
+               'Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
+  const wb = XLSX.utils.book_new();
+
+  // ── STYLE helpers ─────────────────────────────────────────
+  const S = (bold,sz,color,bg,align,border,wrap) => ({
+    font:{name:'Arial',bold:!!bold,sz:sz||10,color:{rgb:color||'1A2D4A'}},
+    fill:{patternType:'solid',fgColor:{rgb:bg||'FFFFFF'}},
+    alignment:{horizontal:align||'center',vertical:'center',wrapText:!!wrap},
+    border: border ? {
+      top:{style:'thin',color:{rgb:'D5DFF0'}},bottom:{style:'thin',color:{rgb:'D5DFF0'}},
+      left:{style:'thin',color:{rgb:'D5DFF0'}},right:{style:'thin',color:{rgb:'D5DFF0'}}
+    } : {}
+  });
+
+  // ══════════════════════════════════════════════════════════
+  // SHEET 1 — TỔNG HỢP CÔNG
+  // ══════════════════════════════════════════════════════════
+  const ws1_data = [];
+  // Tiêu đề
+  ws1_data.push([`BẢNG TỔNG HỢP CÔNG KỸ THUẬT VIÊN — ${MN_VN[m-1].toUpperCase()} ${y}`,'','','','','','','','','','','']);
+  ws1_data.push([`Giờ chuẩn: ${std}h = 1 ngày công`,'','','','','','',
+    `Xuất: ${now.getDate()}/${now.getMonth()+1}/${now.getFullYear()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`,
+    '','','','']);
+  ws1_data.push(['']);
+  ws1_data.push(['STT','Họ và Tên','Tối T2-T6\n(ca)','Tối T7\n(ca)','Ngày CN\n(ca)','Tối CN\n(ca)','Lễ Ngày\n(ca)','Lễ Đêm\n(ca)','Tổng Ca','Tổng Giờ','Ngày Công','Ghi Chú']);
+
+  let totT=0,tot7=0,totC=0,totTC=0,totHLD=0,totHLN=0,totH=0,totCong=0;
+  es.forEach((n,i)=>{
+    const r=calcP(n,m,y,std);
+    totT+=r.nT; tot7+=r.n7; totC+=r.nC; totTC+=r.nTC;
+    totHLD+=r.nHLDay; totHLN+=r.nHLNight; totH+=r.h; totCong+=r.cong;
+    ws1_data.push([i+1, n, r.nT, r.n7, r.nC, r.nTC, r.nHLDay, r.nHLNight,
+      r.tot, +r.h.toFixed(1), +r.cong.toFixed(2), '']);
+  });
+  ws1_data.push(['']);
+  ws1_data.push(['','TỔNG CỘNG',totT,tot7,totC,totTC,totHLD,totHLN,
+    totT+tot7+totC+totTC+totHLD+totHLN, +totH.toFixed(1), +totCong.toFixed(2),'']);
+  ws1_data.push(['']);
+  ws1_data.push(['Ghi chú công thức:','','','','','','','','','','','']);
+  ws1_data.push([`• Tối T2-T6 = 4,5h   |   Tối T7 = 6h   |   Tối CN = 4,5h   |   Ngày CN = ${std}h`,'','','','','','','','','','','']);
+  ws1_data.push(['• Trực lễ ngày (07:30–17:30) = 8h × Hệ số   |   Trực lễ đêm (17:30–22:00) = 4,5h × Hệ số','','','','','','','','','','','']);
+  ws1_data.push([`• Ngày công = Tổng giờ hiệu lực ÷ ${std}h/ngày`,'','','','','','','','','','','']);
+
+  const ws1 = XLSX.utils.aoa_to_sheet(ws1_data);
+
+  // Styling sheet 1
+  const ncols = 12;
+  const colWidths = [6,26,11,11,11,11,11,11,10,12,13,16];
+  ws1['!cols'] = colWidths.map(w=>({wch:w}));
+  ws1['!rows'] = [{hpt:36},{hpt:18},{hpt:8},{hpt:32}];
+  ws1['!merges'] = [
+    {s:{r:0,c:0},e:{r:0,c:11}},
+    {s:{r:1,c:0},e:{r:1,c:6}},
+    {s:{r:1,c:7},e:{r:1,c:11}},
+  ];
+
+  // Apply styles
+  if(!ws1['!styles']) ws1['!styles']={};
+
+  // Tiêu đề row 1
+  ws1['A1'].s = S(true,15,'FFFFFF','1E3A5F','center',false,false);
+  ws1['A2'].s = S(false,10,'FFFFFF','2A5AA4','left',false,false);
+  ws1['H2'].s = S(false,10,'FFFFFF','2A5AA4','right',false,false);
+
+  // Header row 4
+  'ABCDEFGHIJKL'.split('').forEach(col=>{
+    const addr = col+'4';
+    if(ws1[addr]) ws1[addr].s = S(true,10,'FFFFFF','2A5AA4','center',true,true);
+  });
+
+  // Data rows
+  es.forEach((_,i)=>{
+    const row = i+5;
+    const bg = i%2===0?'FFFFFF':'F7F9FD';
+    for(let c=0;c<ncols;c++){
+      const addr=XLSX.utils.encode_cell({r:row-1,c});
+      if(ws1[addr]){
+        const isName=c===1;
+        ws1[addr].s=S(isName,10,isName?'1E3A5F':'1A2D4A',bg,isName?'left':'center',true,false);
+      }
+    }
+    // Ngày công màu xanh lá
+    const congAddr=XLSX.utils.encode_cell({r:row-1,c:10});
+    if(ws1[congAddr]) ws1[congAddr].s=S(true,11,'15803D',i%2===0?'FFFFFF':'F7F9FD','center',true,false);
+  });
+
+  // Tổng cộng row
+  const totRow = es.length+6;
+  for(let c=0;c<ncols;c++){
+    const addr=XLSX.utils.encode_cell({r:totRow-1,c});
+    if(ws1[addr]) ws1[addr].s=S(true,10,'FFFFFF','2A5AA4','center',true,false);
+  }
+
+  XLSX.utils.book_append_sheet(wb, ws1, '📊 Tổng Hợp Công');
+
+  // ══════════════════════════════════════════════════════════
+  // SHEET 2 — LỊCH TRỰC CHI TIẾT
+  // ══════════════════════════════════════════════════════════
+  const days = daysIn(y,m);
+  const ws2_data=[];
+  ws2_data.push([`LỊCH TRỰC CHI TIẾT — ${MN_VN[m-1].toUpperCase()} ${y}`]);
+  ws2_data.push(['']);
+  const hdRow2=['Ngày','Thứ','Loại','Ca Tối / Trực Đêm','Ca Ngày (CN/Lễ)','Tổng Người','Ghi Chú'];
+  ws2_data.push(hdRow2);
+
+  for(let d=1;d<=days;d++){
+    const dw=dowOf(y,m,d);
+    const hl=getHolidayForDate(y,m,d);
+    const ds=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const nightStaff=es.filter(n=>hl?isHlNightReg(m,y,ds,n):!!getC(m,y,n,d));
+    const dayStaff=hl?es.filter(n=>isHlDayReg(m,y,ds,n)):(dw===0?es.filter(n=>getCDay(m,y,n,d)):[]);
+    const loai = hl?`🎌 ${hl.name}`:dw===0?'🌟 CN':dw===6?'🗓️ T7':'📋 Thường';
+    const note = hl?`Hệ số ×${hl.mult||1.5}`:( dw===0?'Ca ngày +1 công':'');
+    ws2_data.push([
+      `${String(d).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y}`,
+      DOW_LBL[dw], loai,
+      nightStaff.length?nightStaff.join(', '):'—',
+      dayStaff.length?dayStaff.join(', '):'—',
+      nightStaff.length+dayStaff.length,
+      note
+    ]);
+  }
+
+  const ws2=XLSX.utils.aoa_to_sheet(ws2_data);
+  ws2['!cols']=[{wch:14},{wch:8},{wch:22},{wch:50},{wch:35},{wch:12},{wch:20}];
+  ws2['!merges']=[{s:{r:0,c:0},e:{r:0,c:6}}];
+  if(ws2['A1']) ws2['A1'].s=S(true,14,'FFFFFF','1E3A5F','center',false,false);
+  hdRow2.forEach((_,i)=>{
+    const addr=XLSX.utils.encode_cell({r:2,c:i});
+    if(ws2[addr]) ws2[addr].s=S(true,10,'FFFFFF','2A5AA4','center',true,true);
+  });
+  for(let d=1;d<=days;d++){
+    const dw=dowOf(y,m,d);
+    const hl=getHolidayForDate(y,m,d);
+    const row=d+2;
+    const bg=hl?'FFF0EE':dw===0?'F0FDF4':dw===6?'FFFBEB':'FFFFFF';
+    for(let c=0;c<7;c++){
+      const addr=XLSX.utils.encode_cell({r:row,c});
+      if(ws2[addr]) ws2[addr].s=S(false,10,'1A2D4A',bg,'left',true,c===3||c===4);
+    }
+  }
+  XLSX.utils.book_append_sheet(wb, ws2, '📅 Lịch Chi Tiết');
+
+  // ══════════════════════════════════════════════════════════
+  // SHEET 3 — THỐNG KÊ TỪNG NGƯỜI
+  // ══════════════════════════════════════════════════════════
+  const ws3_data=[];
+  ws3_data.push([`THỐNG KÊ CHI TIẾT TỪNG KTV — ${MN_VN[m-1].toUpperCase()} ${y}`]);
+  ws3_data.push(['']);
+  ws3_data.push(['Họ và Tên','Ca Tối T2-T6','Giờ (T2-T6)','Ca Tối T7','Giờ (T7)',
+    'Ca Ngày CN','Giờ (CN)','Ca Tối CN','Giờ (tối CN)',
+    'Lễ Ngày (ca)','Giờ Lễ Ngày','Lễ Đêm (ca)','Giờ Lễ Đêm',
+    'Tổng Ca','Tổng Giờ Thô','Giờ Hiệu Lực','Ngày Công']);
+
+  es.forEach(n=>{
+    const r=calcP(n,m,y,std);
+    ws3_data.push([
+      n,
+      r.nT,   +(r.nT*4.5).toFixed(1),
+      r.n7,   +(r.n7*6).toFixed(1),
+      r.nC,   +(r.nC*std).toFixed(1),
+      r.nTC,  +(r.nTC*4.5).toFixed(1),
+      r.nHLDay, +(r.hlDayH).toFixed(1),
+      r.nHLNight,+(r.hlNightH).toFixed(1),
+      r.tot, +(r.nT*4.5+r.n7*6+r.nC*std+r.nTC*4.5).toFixed(1),
+      +r.h.toFixed(1), +r.cong.toFixed(2)
+    ]);
+  });
+  const ws3=XLSX.utils.aoa_to_sheet(ws3_data);
+  ws3['!cols']=[{wch:24},...Array(16).fill({wch:12})];
+  ws3['!merges']=[{s:{r:0,c:0},e:{r:0,c:16}}];
+  if(ws3['A1']) ws3['A1'].s=S(true,14,'FFFFFF','1E3A5F','center',false,false);
+  for(let c=0;c<17;c++){
+    const addr=XLSX.utils.encode_cell({r:2,c});
+    if(ws3[addr]) ws3[addr].s=S(true,9,'FFFFFF','2A5AA4','center',true,true);
+  }
+  es.forEach((_,i)=>{
+    const row=i+3;
+    const bg=i%2===0?'FFFFFF':'F7F9FD';
+    for(let c=0;c<17;c++){
+      const addr=XLSX.utils.encode_cell({r:row,c});
+      if(ws3[addr]){
+        const isCong=c===16;
+        ws3[addr].s=S(isCong,isCong?11:10,isCong?'15803D':'1A2D4A',bg,c===0?'left':'center',true,false);
+      }
+    }
+  });
+  XLSX.utils.book_append_sheet(wb, ws3, '📈 Chi Tiết KTV');
+
+  // ══════════════════════════════════════════════════════════
+  // SHEET 4 — NGÀY LỄ
+  // ══════════════════════════════════════════════════════════
+  const hlDates=getHolidayTrucDatesInMonth(m,y);
+  if(hlDates.length){
+    const ws4_data=[];
+    ws4_data.push([`ĐĂNG KÝ TRỰC NGÀY LỄ — ${MN_VN[m-1].toUpperCase()} ${y}`]);
+    ws4_data.push(['']);
+    ws4_data.push(['Ngày','Tên Ngày Lễ','Hệ Số','Trực Ngày (☀️)','Trực Đêm (🌙)','Tổng Người']);
+    hlDates.forEach(({d,dw,ds,h:hl})=>{
+      const nd=es.filter(n=>isHlDayReg(m,y,ds,n));
+      const nn=es.filter(n=>isHlNightReg(m,y,ds,n));
+      ws4_data.push([
+        `${DOW_LBL[dw]}, ${String(d).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y}`,
+        hl.name, `×${hl.mult||1.5}`,
+        nd.length?nd.join(', '):'—',
+        nn.length?nn.join(', '):'—',
+        nd.length+nn.length
+      ]);
+    });
+    const ws4=XLSX.utils.aoa_to_sheet(ws4_data);
+    ws4['!cols']=[{wch:20},{wch:28},{wch:10},{wch:45},{wch:45},{wch:12}];
+    ws4['!merges']=[{s:{r:0,c:0},e:{r:0,c:5}}];
+    if(ws4['A1']) ws4['A1'].s=S(true,14,'FFFFFF','C0392B','center',false,false);
+    for(let c=0;c<6;c++){
+      const addr=XLSX.utils.encode_cell({r:2,c});
+      if(ws4[addr]) ws4[addr].s=S(true,10,'FFFFFF','E74C3C','center',true,true);
+    }
+    XLSX.utils.book_append_sheet(wb, ws4, '🎌 Ngày Lễ');
+  }
+
+  // ── Xuất file ─────────────────────────────────────────────
+  XLSX.writeFile(wb, `CongKyThuat_T${m}_${y}.xlsx`);
+  showToast('Đã xuất file Excel chi tiết 📊', 'success');
 }
 
 function exportHTMLReport(){
@@ -2563,6 +2823,183 @@ async function clearOldLogs(){
   }
   showToast(`Đã xóa ${deleted} log cũ`,'success');
   await loadAndRenderLog();
+}
+
+  // ============================================================
+// DASHBOARD
+// ============================================================
+function renderDashboard(){
+  const now = new Date();
+  const todayY = now.getFullYear();
+  const todayM = now.getMonth()+1;
+  const todayD = now.getDate();
+  const todayDow = now.getDay();
+  const m = todayM, y = todayY;
+  const std = gStd();
+  const activeStaff = window._staff.filter(n=>!isStaffLocked(n));
+
+  // ── Hôm nay ──────────────────────────────────────────────
+  const todayDs = `${y}-${String(m).padStart(2,'0')}-${String(todayD).padStart(2,'0')}`;
+  const todayHl = getHolidayForDate(y, m, todayD);
+  let nightToday=[], dayToday=[], sunDayToday=[];
+  activeStaff.forEach(n=>{
+    if(todayHl){
+      if(isHlNightReg(m,y,todayDs,n)) nightToday.push(n);
+      if(isHlDayReg(m,y,todayDs,n))  dayToday.push(n);
+    } else {
+      if(getC(m,y,n,todayD)) nightToday.push(n);
+      if(todayDow===0 && getCDay(m,y,n,todayD)) sunDayToday.push(n);
+    }
+  });
+
+  // ── Tuần này ─────────────────────────────────────────────
+  const weekDays=[];
+  for(let i=0;i<7;i++){
+    const dd = new Date(now);
+    dd.setDate(todayD - todayDow + i);
+    if(dd.getMonth()+1!==m || dd.getFullYear()!==y) continue;
+    const d2 = dd.getDate(), dw2=dd.getDay();
+    const ds2=`${y}-${String(m).padStart(2,'0')}-${String(d2).padStart(2,'0')}`;
+    const hl2=getHolidayForDate(y,m,d2);
+    const night2=activeStaff.filter(n=>hl2?isHlNightReg(m,y,ds2,n):!!getC(m,y,n,d2));
+    const day2=hl2?activeStaff.filter(n=>isHlDayReg(m,y,ds2,n)):[];
+    const sun2=(!hl2&&dw2===0)?activeStaff.filter(n=>getCDay(m,y,n,d2)):[];
+    weekDays.push({d:d2,dw:dw2,ds:ds2,hl:hl2,night:night2,day:day2,sun:sun2,isToday:d2===todayD});
+  }
+
+  // ── Chưa đăng ký tháng này ───────────────────────────────
+  const days = daysIn(y,m);
+  const unregList = activeStaff.map(n=>{
+    let total=0;
+    for(let d=1;d<=days;d++){
+      const hl=getHolidayForDate(y,m,d);
+      const ds=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      if(hl){ if(isHlNightReg(m,y,ds,n)||isHlDayReg(m,y,ds,n)) total++; }
+      else { if(getC(m,y,n,d)) total++; if(dowOf(y,m,d)===0&&getCDay(m,y,n,d)) total++; }
+    }
+    return{n,total};
+  }).sort((a,b)=>a.total-b.total);
+
+  // ── Thống kê nhanh tháng này ─────────────────────────────
+  let totCa=0, daysWithShift=0;
+  for(let d=1;d<=days;d++){
+    const hl=getHolidayForDate(y,m,d);
+    const ds=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    let cnt=0;
+    activeStaff.forEach(n=>{
+      if(hl){ if(isHlNightReg(m,y,ds,n)||isHlDayReg(m,y,ds,n)) cnt++; }
+      else { if(getC(m,y,n,d)) cnt++; if(dowOf(y,m,d)===0&&getCDay(m,y,n,d)) cnt++; }
+    });
+    totCa+=cnt; if(cnt>0) daysWithShift++;
+  }
+  const pctFilled = Math.round(daysWithShift/days*100);
+
+  // ── Render ────────────────────────────────────────────────
+  const DOW_FULL=['Chủ Nhật','Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy'];
+  const nowStr = `${String(todayD).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y}`;
+
+  let html = `
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+    <div>
+      <div style="font-size:22px;font-weight:900;color:var(--text)">🏠 Tổng Quan Hệ Thống</div>
+      <div style="font-size:13px;color:var(--text3);font-weight:600;margin-top:2px">${DOW_FULL[todayDow]}, ${nowStr} — Tháng ${m}/${y}</div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <div class="kpi" style="margin:0;min-width:130px;padding:12px 16px">
+        <div class="kpi-lbl">Tổng ca tháng</div>
+        <div class="kpi-val" style="font-size:22px">${totCa}</div>
+      </div>
+      <div class="kpi g" style="margin:0;min-width:130px;padding:12px 16px">
+        <div class="kpi-lbl">Ngày có trực</div>
+        <div class="kpi-val" style="font-size:22px">${daysWithShift}/${days}</div>
+      </div>
+      <div class="kpi a" style="margin:0;min-width:130px;padding:12px 16px">
+        <div class="kpi-lbl">Độ phủ lịch</div>
+        <div class="kpi-val" style="font-size:22px">${pctFilled}%</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dash-grid">
+
+    <!-- HÔM NAY -->
+    <div class="dash-card">
+      <div class="dash-card-head blue">📅 Trực Hôm Nay — ${DOW_FULL[todayDow]} ${nowStr}${todayHl?` 🎌 ${todayHl.name}`:''}</div>
+      <div class="dash-card-body">`;
+
+  if(todayHl){
+    html += `<div style="font-size:11.5px;font-weight:800;color:#b45309;margin-bottom:6px">☀️ Trực ngày lễ</div>`;
+    html += dayToday.length
+      ? dayToday.map(n=>`<span class="dash-staff-pill day">☀️ ${n}</span>`).join('')
+      : `<div class="dash-empty" style="padding:8px">Chưa có đăng ký</div>`;
+    html += `<div style="font-size:11.5px;font-weight:800;color:var(--blue);margin:10px 0 6px">🌙 Trực đêm lễ</div>`;
+    html += nightToday.length
+      ? nightToday.map(n=>`<span class="dash-staff-pill holiday">🌙 ${n}</span>`).join('')
+      : `<div class="dash-empty" style="padding:8px">Chưa có đăng ký</div>`;
+  } else {
+    if(todayDow===0 && sunDayToday.length){
+      html += `<div style="font-size:11.5px;font-weight:800;color:var(--green);margin-bottom:6px">☀️ Trực ngày CN</div>`;
+      html += sunDayToday.map(n=>`<span class="dash-staff-pill day">☀️ ${n}</span>`).join('');
+      html += `<div style="font-size:11.5px;font-weight:800;color:var(--blue);margin:10px 0 6px">🌙 Ca tối CN</div>`;
+    }
+    html += nightToday.length
+      ? nightToday.map(n=>`<span class="dash-staff-pill night">🌙 ${n}</span>`).join('')
+      : `<div class="dash-empty">Chưa có ai đăng ký ca tối hôm nay</div>`;
+  }
+  html += `</div></div>
+
+    <!-- TUẦN NÀY -->
+    <div class="dash-card">
+      <div class="dash-card-head teal">📆 Lịch Trực Tuần Này</div>
+      <div class="dash-card-body" style="padding:8px 14px">`;
+
+  if(!weekDays.length){
+    html += `<div class="dash-empty">Không có ngày nào trong tháng này tuần hiện tại.</div>`;
+  } else {
+    weekDays.forEach(({d,dw,hl,night,day,sun,isToday})=>{
+      const allShift=[...new Set([...night,...day,...sun])];
+      html += `<div class="dash-week-row${isToday?' today-highlight':''}">
+        <div class="dash-week-date">
+          <div>${DOW_LBL[dw]}, ${d}/${m}</div>
+          <div class="dow">${isToday?'● Hôm nay':''}${hl?'🎌':''}</div>
+        </div>
+        <div style="flex:1">`;
+      if(!allShift.length){
+        html+=`<span class="dash-staff-pill none" style="font-size:11px;padding:3px 10px">Chưa có</span>`;
+      } else {
+        if(day.length) html+=day.map(n=>`<span class="dash-staff-pill day" style="font-size:11px;padding:3px 10px">☀️${n}</span>`).join('');
+        if(sun.length) html+=sun.map(n=>`<span class="dash-staff-pill day" style="font-size:11px;padding:3px 10px">☀️${n}</span>`).join('');
+        if(night.length) html+=night.map(n=>`<span class="dash-staff-pill night" style="font-size:11px;padding:3px 10px">🌙${n}</span>`).join('');
+      }
+      html+=`</div></div>`;
+    });
+  }
+  html += `</div></div>
+
+  </div><!-- end dash-grid -->
+
+  <!-- CHƯA ĐĂNG KÝ -->
+  <div class="dash-card" style="margin-bottom:20px">
+    <div class="dash-card-head gold">⚠️ Tình Trạng Đăng Ký — Tháng ${m}/${y}</div>
+    <div class="dash-card-body">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">`;
+
+  const maxCa = Math.max(...unregList.map(x=>x.total), 1);
+  unregList.forEach(({n,total})=>{
+    const pct = Math.round(total/maxCa*100);
+    const cls = total===0?'low':total>=maxCa?'ok':'';
+    const barCls = total===0?'low':total>=maxCa?'full':'';
+    html+=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="font-size:13px;font-weight:800;color:var(--text)">${n}</span>
+        <span class="dash-unreg-count ${cls}">${total===0?'⚠️ Chưa đăng ký':total+' ca'}</span>
+      </div>
+      <div class="dash-progress"><div class="dash-progress-bar ${barCls}" style="width:${pct}%"></div></div>
+    </div>`;
+  });
+
+  html += `</div></div></div>`;
+  document.getElementById('dashWrap').innerHTML = html;
 }
 </script>
 </body>
