@@ -573,30 +573,31 @@ table.st tfoot td{background:var(--blue-l);font-weight:800;color:var(--blue);bor
   body{background:#fff}
 }
 
-  /* Highlight hàng khi hover trong matrix */
-/* ── Highlight hàng + cột khi hover ── */
-tbody.rows tr:hover td.nm {
-  background: var(--blue-l) !important;
+ /* ── Crosshair highlight ── */
+tbody.rows tr.row-hover td.nm {
+  background: #dbeafe !important;
   color: var(--blue);
   font-weight: 800;
 }
-tbody.rows tr:hover td.dc { filter: brightness(0.93); }
-tbody.rows tr:hover td.dc.off { background: rgba(42,90,164,0.08) !important; }
-tbody.rows tr:hover td.dc.c-toi { background: #b3c8f5 !important; }
-tbody.rows tr:hover td.dc.c-t7  { background: #fde68a !important; }
-tbody.rows tr:hover td.dc.c-toicn { background: #5eead4 !important; }
-tbody.rows tr:hover td.dc.c-holiday-truc { background: #ffa0a0 !important; }
-
-/* Highlight cột khi hover từng ô */
-td.dc:hover {
-  outline: 2px solid var(--blue) !important;
-  outline-offset: -2px;
-  z-index: 3;
+tbody.rows tr.row-hover td.dc { background: rgba(42,90,164,0.07) !important; }
+tbody.rows tr.row-hover td.dc.c-toi    { background: #b3c8f5 !important; }
+tbody.rows tr.row-hover td.dc.c-t7     { background: #fde68a !important; }
+tbody.rows tr.row-hover td.dc.c-toicn  { background: #5eead4 !important; }
+tbody.rows tr.row-hover td.dc.c-holiday-truc { background: #ffa0a0 !important; }
+tbody.rows tr.row-hover td.dc.past.off { background: rgba(42,90,164,0.07) !important; }
+td.dc.col-hover { background: rgba(42,90,164,0.07) !important; }
+td.dc.col-hover.c-toi    { background: #b3c8f5 !important; }
+td.dc.col-hover.c-t7     { background: #fde68a !important; }
+td.dc.col-hover.c-toicn  { background: #5eead4 !important; }
+td.dc.col-hover.c-holiday-truc { background: #ffa0a0 !important; }
+td.dc.cell-active {
+  background: var(--blue) !important;
+  outline: 3px solid var(--gold) !important;
+  outline-offset: -3px;
   position: relative;
+  z-index: 10;
 }
-td.dc.c-holiday-truc:hover { outline-color: #c0392b !important; }
-td.dc.c-t7:hover  { outline-color: var(--amber) !important; }
-td.dc.c-toicn:hover { outline-color: var(--teal) !important; }
+td.dc.cell-active .chk { color: #fff !important; }
 </style>
 </head>
 <body>
@@ -1578,6 +1579,7 @@ function renderMatrix(){
     toggle(name, d, dw);
   };
   mxWrap.addEventListener('click', _mxClickHandler);
+  initCrosshair();
 }
 
 // ============================================================
@@ -2266,6 +2268,53 @@ ${calRows.map(({d,dw,ds,hl,nightStaff,dayStaff,sunDayStaff})=>{
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a'); a.href=url; a.download=`BaoCaoCong_KyThuat_T${m}_${y}.html`; a.click(); URL.revokeObjectURL(url);
   showToast('Đã xuất báo cáo HTML 📊', 'success');
+}
+  // ── Crosshair hover cho matrix ──
+function initCrosshair() {
+  const wrap = document.getElementById('mxWrap');
+  if (!wrap) return;
+  if (wrap._crosshairOver) wrap.removeEventListener('mouseover', wrap._crosshairOver);
+  if (wrap._crosshairOut)  wrap.removeEventListener('mouseout',  wrap._crosshairOut);
+  if (wrap._crosshairLeave) wrap.removeEventListener('mouseleave', wrap._crosshairLeave);
+
+  wrap._crosshairOver = function(e) {
+    const td = e.target.closest('td.dc');
+    if (!td) return;
+    clearCrosshair();
+    const tr = td.closest('tr');
+    if (tr) tr.classList.add('row-hover');
+    const allTds = Array.from(tr.querySelectorAll('td'));
+    const colIdx = allTds.indexOf(td);
+    if (colIdx < 0) return;
+    const tbody = wrap.querySelector('tbody.rows');
+    if (!tbody) return;
+    tbody.querySelectorAll('tr').forEach(row => {
+      const cells = row.querySelectorAll('td');
+      if (cells[colIdx]) cells[colIdx].classList.add('col-hover');
+    });
+    td.classList.add('cell-active');
+    td.classList.remove('col-hover');
+  };
+
+  wrap._crosshairOut = function(e) {
+    const related = e.relatedTarget;
+    if (related && wrap.contains(related)) return;
+    clearCrosshair();
+  };
+
+  wrap._crosshairLeave = function() { clearCrosshair(); };
+
+  wrap.addEventListener('mouseover',  wrap._crosshairOver);
+  wrap.addEventListener('mouseout',   wrap._crosshairOut);
+  wrap.addEventListener('mouseleave', wrap._crosshairLeave);
+}
+
+function clearCrosshair() {
+  const wrap = document.getElementById('mxWrap');
+  if (!wrap) return;
+  wrap.querySelectorAll('tr.row-hover').forEach(r => r.classList.remove('row-hover'));
+  wrap.querySelectorAll('.col-hover').forEach(c => c.classList.remove('col-hover'));
+  wrap.querySelectorAll('.cell-active').forEach(c => c.classList.remove('cell-active'));
 }
 </script>
 </body>
