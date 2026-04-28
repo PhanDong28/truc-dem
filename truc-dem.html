@@ -2164,9 +2164,13 @@ function renderAccounts(){
       </div>
       <div class="acc-meta"><span>👤 ${a.username}</span>${a.staffLink?`<span>🔗 ${a.staffLink}</span>`:''}</div>
       <div class="acc-actions">
-        <button class="btn btn-sm btn-gold" onclick="openEditAccount('${a.id}')">✏️ Sửa</button>
-        <button class="btn btn-sm" onclick="openPwdModal('${a.id}')">🔒 MK</button>
-       ${(!isSelf && isVipUser())?`<button class="btn btn-sm btn-red" onclick="deleteAccount('${a.id}')">🗑</button>`:''}
+        ${(isVipUser() || a.role !== 'admin' || isSelf) ?
+          `<button class="btn btn-sm btn-gold" onclick="openEditAccount('${a.id}')">✏️ Sửa</button>` : ''}
+        ${(isVipUser() || a.role !== 'admin' || isSelf) ?
+          `<button class="btn btn-sm" onclick="openPwdModal('${a.id}')">🔒 MK</button>` : ''}
+        ${(!isSelf && isVipUser())?`<button class="btn btn-sm btn-red" onclick="deleteAccount('${a.id}')">🗑</button>`:''}
+        ${(!isVipUser() && a.role === 'admin' && !isSelf) ?
+          `<div class="acc-protected">🔒 Chỉ Super Admin mới có thể chỉnh sửa</div>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -2219,6 +2223,17 @@ async function saveAccount(){
   const isEditingVip = editAccId && isVipAccount(editAccId);
   const role = isEditingVip ? 'admin' : document.getElementById('mAccRole').value;
   const staffLink = document.getElementById('mAccStaff').value || null;
+
+  // Kiểm tra quyền: admin thường không được sửa role của admin khác (trừ chính mình)
+  if(editAccId && !isVipUser()){
+    const targetAcc = window._accounts.find(a=>a.id===editAccId);
+    if(targetAcc && targetAcc.role === 'admin' && targetAcc.id !== currentUser.id){
+      await dlgAlert('Bạn không có quyền chỉnh sửa tài khoản Admin khác!',{title:'Không có quyền',icon:'🔒',iconCls:'ic-danger'});
+      closeModal('modalAcc');
+      return;
+    }
+  }
+
   if(!name||!username){ await dlgAlert('Vui lòng nhập đầy đủ họ tên và tên đăng nhập!',{title:'Thiếu thông tin',icon:'⚠️',iconCls:'ic-warn'}); return; }
   if(!editAccId&&!pass){ await dlgAlert('Vui lòng nhập mật khẩu!',{title:'Thiếu mật khẩu',icon:'🔒',iconCls:'ic-warn'}); return; }
   if(!editAccId&&window._accounts.find(a=>a.username===username)){ await dlgAlert(`Tên đăng nhập <strong>"${username}"</strong> đã tồn tại!`,{title:'Trùng username',icon:'⚠️',iconCls:'ic-warn'}); return; }
