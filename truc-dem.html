@@ -105,6 +105,8 @@ async function loadAllFromFirebase() {
     window._hlReg = hlRegAll;
     const hlDayRegAll = await fbGetAll('hlDayReg');
     window._hlDayReg = hlDayRegAll;
+    const iconMapDoc = await fbGet('config', 'iconMap');
+    window._iconMap = iconMapDoc ? iconMapDoc.map : {};
     return true;
   } catch(e) {
     console.error('Load error:', e);
@@ -219,6 +221,14 @@ async function saveHolidays() {
   try { await fbSet('config', 'holidays', { list: window._holidays }); showSyncStatus('online'); }
   catch(e) { showSyncStatus('error'); }
 }
+  async function saveIconMap() {
+  showSyncStatus('saving');
+  try {
+    await fbSet('config', 'iconMap', { map: window._iconMap });
+    showSyncStatus('online');
+  } catch(e) { showSyncStatus('error'); }
+}
+window._saveIconMap = saveIconMap;
 
 window._saveAtt = saveAtt;
 window._saveAttDay = saveAttDay;
@@ -1128,6 +1138,7 @@ window._lockedStaff = [];
 window._hlReg = {};
 window._hlDayReg = {};
 window._firebaseReady = false;
+window._iconMap = {};  
 
 let currentUser = null;
 let editAccId = null, pwdAccId = null, editHolidayId = null;
@@ -1691,12 +1702,13 @@ h += `<td class="nm" style="${isSelf ? 'background:linear-gradient(90deg,#fef7e8
         cls+=' today-col';
       }
       if(!editable) cls+=' no-edit';
+      const ktvIcon = window._iconMap?.[n] || '✓';
       let inner = '';
       if(hl){
-        if(isNightHl) inner=`<div class="chk toicn" style="font-size:10px">🌙✓</div>`;
+        if(isNightHl) inner=`<div class="chk toicn" style="font-size:14px">🌙${ktvIcon}</div>`;
         else inner=`<div class="chk hl" title="${hl.name}">🎌</div>`;
       } else if(type){
-        inner=`<div class="chk ${type}">✓</div>`;
+        inner=`<div class="chk ${type}" style="font-size:16px">${ktvIcon}</div>`;
       }
       const cellid = cellId(n, d);
       h += `<td id="${cellid}" class="${cls}" data-name="${encodeURIComponent(n)}" data-d="${d}" data-dw="${dw}">${inner}</td>`;
@@ -2113,6 +2125,10 @@ function renderStaff(){
       <td style="font-weight:700">${s}${locked?`<span class="lock-badge">🔒 Đã khóa</span>`:`<span class="unlock-badge">✅ Hoạt động</span>`}</td>
       <td><div class="action-btns" style="justify-content:flex-end">
         <button class="btn btn-sm btn-gold" onclick="editStaff(${idx})">✏️ Sửa</button>
+        <button class="btn btn-sm" onclick="openIconPicker(${idx})" 
+        title="Chọn icon" style="font-size:15px">
+        ${window._iconMap?.[s] || '✓'} Icon
+        </button>
         <button class="btn btn-sm btn-amber" onclick="toggleLockStaff(decodeURIComponent('${sEsc}'))">
           ${locked?'🔓 Mở khóa':'🔒 Khóa'}
         </button>
@@ -3110,6 +3126,81 @@ ${upcomingHL.length?`
 </div>`:''}
 `;
 }
+
+  const ICON_CATS = {
+  'Ký hiệu':   ['✅','☑️','💯','🎯','⚡','🔥','💎','🌟','👑','🏆','🎪','💠'],
+  'Kỹ thuật':  ['🔧','🔩','🔌','💡','⚙️','🛠️','📡','🔬','💻','🖥️','📟','🔋'],
+  'Thiên nhiên':['🌸','🌺','🌻','🍀','🌿','🌊','🌙','☀️','❄️','🌈','🌴','🍁'],
+  'Động vật':  ['🦁','🐯','🦊','🦅','🦉','🐉','🦋','🐬','🦈','🦎','🦚','🦜'],
+  'Hình học':  ['⬛','🔷','🔶','🟥','🟩','🟦','🟪','🟨','🔘','🔲','💠','🔹'],
+};
+
+let _iconPickerStaff = null;
+let _iconActiveCat = 'Ký hiệu';
+
+function openIconPicker(idx) {
+  _iconPickerStaff = window._staff[idx];
+  document.getElementById('modalIconTitle').textContent = 
+    'Chọn icon cho: ' + _iconPickerStaff;
+  _iconActiveCat = 'Ký hiệu';
+  renderIconCatTabs();
+  renderIconGrid();
+  document.getElementById('modalIcon').classList.remove('hidden');
+}
+
+function renderIconCatTabs() {
+  document.getElementById('iconCatTabs').innerHTML = 
+    Object.keys(ICON_CATS).map(cat => `
+      <button class="btn btn-sm ${_iconActiveCat===cat?'btn-primary':''}" 
+        onclick="switchIconCat('${cat}')">${cat}</button>
+    `).join('');
+}
+
+function switchIconCat(cat) {
+  _iconActiveCat = cat;
+  renderIconCatTabs();
+  renderIconGrid();
+}
+
+function renderIconGrid() {
+  const current = window._iconMap?.[_iconPickerStaff] || '✓';
+  document.getElementById('iconCurrentPreview').textContent = current;
+  document.getElementById('iconPickerGrid').innerHTML = 
+    ICON_CATS[_iconActiveCat].map(ic => `
+      <div onclick="selectIcon('${ic}')" title="${ic}"
+        style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;
+          font-size:22px;border:${ic===current?'2px solid var(--blue)':'1px solid var(--border2)'};
+          border-radius:8px;cursor:pointer;background:${ic===current?'var(--blue-l)':'var(--surface)'};
+          transition:all .12s"
+        onmouseover="this.style.background='var(--blue-l)'"
+        onmouseout="this.style.background='${ic===current?'var(--blue-l)':'var(--surface)'}'"
+      >${ic}</div>
+    `).join('');
+}
+
+function selectIcon(ic) {
+  if (!_iconPickerStaff) return;
+  if (!window._iconMap) window._iconMap = {};
+  window._iconMap[_iconPickerStaff] = ic;
+  if (window._saveIconMap) window._saveIconMap();
+  renderIconGrid();
+  renderStaff();
+  renderAll();
+  showToast(`Đã đặt icon ${ic} cho ${_iconPickerStaff}`, 'success');
+}
 </script>
+  <div class="modal-bg hidden" id="modalIcon">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-title" id="modalIconTitle">Chọn icon cho KTV</div>
+    <div id="iconCatTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
+    <div id="iconPickerGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:6px;max-height:240px;overflow-y:auto"></div>
+    <div style="margin-top:14px;padding:10px 14px;background:var(--surface);border-radius:8px;font-size:13px;color:var(--text2)">
+      Icon hiện tại: <span id="iconCurrentPreview" style="font-size:20px;vertical-align:middle"></span>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modalIcon')">Đóng</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
