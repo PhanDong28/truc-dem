@@ -572,6 +572,18 @@ table.st tfoot td{background:var(--blue-l);font-weight:800;color:var(--blue);bor
   .panel{display:block!important}
   body{background:#fff}
 }
+
+  /* Highlight hàng khi hover trong matrix */
+tbody.rows tr:hover td.nm {
+  background: var(--blue-l) !important;
+  color: var(--blue);
+}
+tbody.rows tr:hover td.dc.off { background: rgba(42,90,164,0.06) !important; }
+tbody.rows tr:hover td.dc.c-toi { background: #c8d9f7 !important; }
+tbody.rows tr:hover td.dc.c-t7 { background: #fef08a !important; }
+tbody.rows tr:hover td.dc.c-toicn { background: #99f6e4 !important; }
+tbody.rows tr:hover td.dc.c-holiday-truc { background: #ffb3b3 !important; }
+tbody.rows tr:hover td.dc.past.off { background: rgba(42,90,164,0.06) !important; }
 </style>
 </head>
 <body>
@@ -1256,12 +1268,19 @@ function initApp(){
   document.querySelectorAll('[data-admin-only]').forEach(t=>{
     if(isAdmin()) t.classList.add('show'); else t.classList.remove('show');
   });
-  document.getElementById('btnClear').style.display = isAdmin() ? '' : 'none';
+  document.getElementById('btnClear').style.display = isVipUser() ? '' : 'none';
   const now = new Date(), cm = now.getMonth()+1, cy = now.getFullYear();
   fillSel('sM', cm); fillSel('sM2', cm);
   document.getElementById('sY').value = cy;
   document.getElementById('sY2').value = cy;
   if(window._startRealtimeListeners) window._startRealtimeListeners(cm, cy, ()=>renderAll());
+  if(!isAdmin()){
+  var ssEl = document.getElementById('sS');
+  ssEl.disabled = true;
+  ssEl.title = 'Chỉ Admin mới được thay đổi';
+  ssEl.style.opacity = '0.5';
+  ssEl.style.cursor = 'not-allowed';
+}
   renderAll();
 }
 
@@ -1927,7 +1946,7 @@ function renderStaff(){
         <button class="btn btn-sm btn-amber" onclick="toggleLockStaff(decodeURIComponent('${sEsc}'))">
           ${locked?'🔓 Mở khóa':'🔒 Khóa'}
         </button>
-        <button class="btn btn-sm btn-red" onclick="deleteStaff(${idx})">🗑</button>
+        ${isVipUser()?`<button class="btn btn-sm btn-red" onclick="deleteStaff(${idx})">🗑</button>`:''}
       </div></td></tr>`;
   });
   document.getElementById('staffTbody').innerHTML = html;
@@ -2020,7 +2039,7 @@ function renderAccounts(){
       <div class="acc-actions">
         <button class="btn btn-sm btn-gold" onclick="openEditAccount('${a.id}')">✏️ Sửa</button>
         <button class="btn btn-sm" onclick="openPwdModal('${a.id}')">🔒 MK</button>
-        ${!isSelf?`<button class="btn btn-sm btn-red" onclick="deleteAccount('${a.id}')">🗑</button>`:''}
+       ${(!isSelf && isVipUser())?`<button class="btn btn-sm btn-red" onclick="deleteAccount('${a.id}')">🗑</button>`:''}
       </div>
     </div>`;
   }).join('');
