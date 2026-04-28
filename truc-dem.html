@@ -1375,6 +1375,10 @@ function initApp(){
   document.querySelectorAll('[data-superadmin-only]').forEach(t=>{
     if(isVipUser()) t.style.display='flex'; else t.style.display='none';
   });
+  // Tab admin-only: hiện với admin và super admin, ẩn với staff và hncs
+  document.querySelectorAll('.tab[data-admin-only]').forEach(t=>{
+    if(isAdmin()) t.classList.add('show'); else t.classList.remove('show');
+  });
   document.getElementById('btnClear').style.display = isVipUser() ? '' : 'none';
   const now = new Date(), cm = now.getMonth()+1, cy = now.getFullYear();
   fillSel('sM', cm); fillSel('sM2', cm);
@@ -1490,7 +1494,6 @@ function calcP(n, m, y, std){
 // ============================================================
 function switchTab(id, btn){
   if((id==='t3'||id==='t4'||id==='t5') && !isAdmin()) return;
-  if(id==='t2' && !isAdmin() && !isHNCS()) return;
   if(id==='t6' && !isVipUser()) return;
   if(id==='t6') loadAndRenderLog();
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
