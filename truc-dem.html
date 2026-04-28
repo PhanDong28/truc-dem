@@ -2830,176 +2830,285 @@ async function clearOldLogs(){
 // ============================================================
 function renderDashboard(){
   const now = new Date();
-  const todayY = now.getFullYear();
-  const todayM = now.getMonth()+1;
-  const todayD = now.getDate();
-  const todayDow = now.getDay();
-  const m = todayM, y = todayY;
-  const std = gStd();
-  const activeStaff = window._staff.filter(n=>!isStaffLocked(n));
+  const todayY=now.getFullYear(), todayM=now.getMonth()+1, todayD=now.getDate(), todayDow=now.getDay();
+  const m=todayM, y=todayY, std=gStd();
+  const activeStaff=window._staff.filter(n=>!isStaffLocked(n));
+  const days=daysIn(y,m);
+  const DOW_FULL=['Chủ Nhật','Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy'];
+  const MN_VN=['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
 
-  // ── Hôm nay ──────────────────────────────────────────────
-  const todayDs = `${y}-${String(m).padStart(2,'0')}-${String(todayD).padStart(2,'0')}`;
-  const todayHl = getHolidayForDate(y, m, todayD);
-  let nightToday=[], dayToday=[], sunDayToday=[];
+  // Hôm nay
+  const todayDs=`${y}-${String(m).padStart(2,'0')}-${String(todayD).padStart(2,'0')}`;
+  const todayHl=getHolidayForDate(y,m,todayD);
+  let nightToday=[],dayToday=[],sunDayToday=[];
   activeStaff.forEach(n=>{
-    if(todayHl){
-      if(isHlNightReg(m,y,todayDs,n)) nightToday.push(n);
-      if(isHlDayReg(m,y,todayDs,n))  dayToday.push(n);
-    } else {
-      if(getC(m,y,n,todayD)) nightToday.push(n);
-      if(todayDow===0 && getCDay(m,y,n,todayD)) sunDayToday.push(n);
-    }
+    if(todayHl){ if(isHlNightReg(m,y,todayDs,n)) nightToday.push(n); if(isHlDayReg(m,y,todayDs,n)) dayToday.push(n); }
+    else { if(getC(m,y,n,todayD)) nightToday.push(n); if(todayDow===0&&getCDay(m,y,n,todayD)) sunDayToday.push(n); }
   });
 
-  // ── Tuần này ─────────────────────────────────────────────
+  // Tuần này
   const weekDays=[];
   for(let i=0;i<7;i++){
-    const dd = new Date(now);
-    dd.setDate(todayD - todayDow + i);
-    if(dd.getMonth()+1!==m || dd.getFullYear()!==y) continue;
-    const d2 = dd.getDate(), dw2=dd.getDay();
+    const dd=new Date(now); dd.setDate(todayD-todayDow+i);
+    if(dd.getMonth()+1!==m||dd.getFullYear()!==y) continue;
+    const d2=dd.getDate(),dw2=dd.getDay();
     const ds2=`${y}-${String(m).padStart(2,'0')}-${String(d2).padStart(2,'0')}`;
     const hl2=getHolidayForDate(y,m,d2);
-    const night2=activeStaff.filter(n=>hl2?isHlNightReg(m,y,ds2,n):!!getC(m,y,n,d2));
-    const day2=hl2?activeStaff.filter(n=>isHlDayReg(m,y,ds2,n)):[];
-    const sun2=(!hl2&&dw2===0)?activeStaff.filter(n=>getCDay(m,y,n,d2)):[];
-    weekDays.push({d:d2,dw:dw2,ds:ds2,hl:hl2,night:night2,day:day2,sun:sun2,isToday:d2===todayD});
+    weekDays.push({
+      d:d2,dw:dw2,hl:hl2,isToday:d2===todayD,
+      night:activeStaff.filter(n=>hl2?isHlNightReg(m,y,ds2,n):!!getC(m,y,n,d2)),
+      day:hl2?activeStaff.filter(n=>isHlDayReg(m,y,ds2,n)):[],
+      sun:(!hl2&&dw2===0)?activeStaff.filter(n=>getCDay(m,y,n,d2)):[]
+    });
   }
 
-  // ── Chưa đăng ký tháng này ───────────────────────────────
-  const days = daysIn(y,m);
-  const unregList = activeStaff.map(n=>{
-    let total=0;
-    for(let d=1;d<=days;d++){
-      const hl=getHolidayForDate(y,m,d);
-      const ds=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-      if(hl){ if(isHlNightReg(m,y,ds,n)||isHlDayReg(m,y,ds,n)) total++; }
-      else { if(getC(m,y,n,d)) total++; if(dowOf(y,m,d)===0&&getCDay(m,y,n,d)) total++; }
-    }
-    return{n,total};
-  }).sort((a,b)=>a.total-b.total);
-
-  // ── Thống kê nhanh tháng này ─────────────────────────────
-  let totCa=0, daysWithShift=0;
+  // Thống kê tháng
+  let totCa=0,daysWithShift=0,totNight=0,totDay=0,totSun=0,totHL=0;
+  const staffCounts={};
+  activeStaff.forEach(n=>staffCounts[n]=0);
   for(let d=1;d<=days;d++){
     const hl=getHolidayForDate(y,m,d);
     const ds=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     let cnt=0;
     activeStaff.forEach(n=>{
-      if(hl){ if(isHlNightReg(m,y,ds,n)||isHlDayReg(m,y,ds,n)) cnt++; }
-      else { if(getC(m,y,n,d)) cnt++; if(dowOf(y,m,d)===0&&getCDay(m,y,n,d)) cnt++; }
+      if(hl){
+        if(isHlNightReg(m,y,ds,n)){cnt++;totHL++;staffCounts[n]++;}
+        if(isHlDayReg(m,y,ds,n)){cnt++;totHL++;staffCounts[n]++;}
+      } else {
+        const t=getC(m,y,n,d);
+        if(t){cnt++;totNight++;staffCounts[n]++;}
+        if(dowOf(y,m,d)===0&&getCDay(m,y,n,d)){cnt++;totSun++;staffCounts[n]++;}
+      }
     });
     totCa+=cnt; if(cnt>0) daysWithShift++;
   }
-  const pctFilled = Math.round(daysWithShift/days*100);
+  const pctFilled=Math.round(daysWithShift/days*100);
+  const sortedStaff=[...activeStaff].sort((a,b)=>staffCounts[b]-staffCounts[a]);
+  const maxCount=Math.max(...Object.values(staffCounts),1);
 
-  // ── Render ────────────────────────────────────────────────
-  const DOW_FULL=['Chủ Nhật','Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy'];
-  const nowStr = `${String(todayD).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y}`;
+  // Ngày còn lại và lễ sắp tới
+  const upcomingHL=[];
+  for(let d=todayD;d<=days;d++){
+    const hl=getHolidayForDate(y,m,d);
+    if(hl&&d>todayD) upcomingHL.push({d,hl});
+  }
 
-  let html = `
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
-    <div>
-      <div style="font-size:22px;font-weight:900;color:var(--text)">🏠 Tổng Quan Hệ Thống</div>
-      <div style="font-size:13px;color:var(--text3);font-weight:600;margin-top:2px">${DOW_FULL[todayDow]}, ${nowStr} — Tháng ${m}/${y}</div>
+  const nowStr=`${String(todayD).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y}`;
+  const daysLeft=days-todayD;
+
+  // Biểu đồ bar theo từng người (inline SVG)
+  const barW=320, barH=activeStaff.length*32+40;
+  let svgBars='';
+  sortedStaff.forEach((n,i)=>{
+    const cnt=staffCounts[n];
+    const pct=Math.round(cnt/maxCount*100);
+    const bw=Math.round(pct/100*(barW-130));
+    const y0=i*32+8;
+    const barColor=cnt===0?'#e2e8f0':cnt>=maxCount?'#16a34a':cnt>=maxCount*0.6?'#2a5aa4':'#93c5fd';
+    const shortName=n.split(' ').slice(-2).join(' ');
+    svgBars+=`<g>
+      <text x="0" y="${y0+18}" font-size="11" font-family="Be Vietnam Pro,sans-serif" fill="#4a6080" font-weight="600" dominant-baseline="auto">${shortName}</text>
+      <rect x="118" y="${y0+4}" width="${Math.max(bw,cnt===0?0:4)}" height="18" rx="4" fill="${barColor}"/>
+      <text x="${118+Math.max(bw,4)+6}" y="${y0+18}" font-size="11" font-family="IBM Plex Mono,monospace" fill="${cnt===0?'#c0392b':cnt>=maxCount?'#16a34a':'#2a5aa4'}" font-weight="700">${cnt===0?'0':cnt}</text>
+    </g>`;
+  });
+
+  // Vòng tròn tiến độ tháng
+  const r=44,cx=56,cy=56,circ=2*Math.PI*r;
+  const dash=circ*pctFilled/100;
+  const pctColor=pctFilled>=80?'#16a34a':pctFilled>=50?'#2a5aa4':'#f4a31d';
+
+  document.getElementById('dashWrap').innerHTML = `
+<style>
+.dsh-section{margin-bottom:20px}
+.dsh-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.dsh-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:700px){.dsh-row,.dsh-row-3{grid-template-columns:1fr}}
+.dsh-card{background:var(--white);border:1px solid var(--border);border-radius:14px;box-shadow:var(--sh);overflow:hidden}
+.dsh-card-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);padding:14px 18px 0}
+.dsh-today-head{background:var(--blue-dd);padding:16px 20px;display:flex;align-items:flex-start;gap:14px}
+.dsh-today-date{color:#fff}
+.dsh-today-day{font-size:13px;font-weight:700;opacity:.75}
+.dsh-today-num{font-size:38px;font-weight:900;line-height:1;font-family:'IBM Plex Mono',monospace}
+.dsh-today-month{font-size:13px;font-weight:700;opacity:.75}
+.dsh-today-info{color:#fff;flex:1}
+.dsh-today-title{font-size:15px;font-weight:900;margin-bottom:4px}
+.dsh-today-sub{font-size:12px;opacity:.7}
+.dsh-today-body{padding:14px 18px}
+.dsh-name-tag{display:inline-flex;align-items:center;gap:5px;border-radius:20px;padding:5px 13px;font-size:12.5px;font-weight:700;margin:3px}
+.dsh-name-tag.night{background:var(--blue-l);color:var(--blue);border:1.5px solid var(--blue-m)}
+.dsh-name-tag.day{background:var(--green-l);color:var(--green);border:1.5px solid var(--green-m)}
+.dsh-name-tag.hl{background:#ffe4e1;color:#c0392b;border:1.5px solid #fca5a5}
+.dsh-name-tag.empty{background:var(--surface);color:var(--text3);border:1.5px dashed var(--border2)}
+.dsh-week-item{display:flex;align-items:center;gap:10px;padding:8px 18px;border-bottom:1px solid var(--border)}
+.dsh-week-item:last-child{border-bottom:none}
+.dsh-week-item.today-row{background:linear-gradient(90deg,#fef9ee,#fff);border-left:3px solid var(--gold)}
+.dsh-week-item.today-row .dsh-week-label{color:var(--gold-d);font-weight:900}
+.dsh-week-label{min-width:72px;font-size:12px;font-weight:700;color:var(--text2)}
+.dsh-week-tags{display:flex;flex-wrap:wrap;gap:4px;flex:1}
+.dsh-mini-tag{font-size:11px;font-weight:600;padding:2px 8px;border-radius:12px}
+.dsh-mini-night{background:var(--blue-l);color:var(--blue)}
+.dsh-mini-day{background:var(--green-l);color:var(--green)}
+.dsh-mini-none{background:var(--surface);color:var(--text3)}
+.dsh-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:14px 18px}
+@media(max-width:600px){.dsh-kpi-grid{grid-template-columns:repeat(2,1fr)}}
+.dsh-kpi{text-align:center}
+.dsh-kpi-val{font-size:24px;font-weight:900;font-family:'IBM Plex Mono',monospace;line-height:1.1}
+.dsh-kpi-lbl{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
+.dsh-staff-bar{padding:4px 18px 14px}
+.dsh-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.dsh-bar-name{min-width:110px;font-size:12px;font-weight:700;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dsh-bar-track{flex:1;height:12px;background:var(--border);border-radius:6px;overflow:hidden}
+.dsh-bar-fill{height:100%;border-radius:6px;transition:width .4s}
+.dsh-bar-count{min-width:28px;font-size:11.5px;font-weight:800;font-family:'IBM Plex Mono',monospace;text-align:right}
+.dsh-hl-item{display:flex;align-items:center;gap:10px;padding:8px 18px;border-bottom:1px solid var(--border)}
+.dsh-hl-item:last-child{border-bottom:none}
+.dsh-hl-badge{background:#c0392b;color:#fff;border-radius:7px;padding:3px 9px;font-size:11.5px;font-weight:800;white-space:nowrap}
+.dsh-ring-wrap{display:flex;align-items:center;gap:20px;padding:14px 18px}
+</style>
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+  <div>
+    <div style="font-size:20px;font-weight:900;color:var(--text);letter-spacing:-.3px">Tổng Quan Tháng ${m}/${y}</div>
+    <div style="font-size:12.5px;color:var(--text3);font-weight:600;margin-top:2px">${DOW_FULL[todayDow]}, ${nowStr} — còn ${daysLeft} ngày trong tháng</div>
+  </div>
+  <button class="btn btn-primary" onclick="switchTab('t1',document.querySelector('.tab'))">Đến Lịch Trực</button>
+</div>
+
+<!-- ROW 1: Hôm nay + Tuần này -->
+<div class="dsh-row">
+
+  <!-- HÔM NAY -->
+  <div class="dsh-card">
+    <div class="dsh-today-head">
+      <div class="dsh-today-date">
+        <div class="dsh-today-day">${DOW_FULL[todayDow]}</div>
+        <div class="dsh-today-num">${todayD}</div>
+        <div class="dsh-today-month">${MN_VN[m-1]} ${y}</div>
+      </div>
+      <div class="dsh-today-info">
+        <div class="dsh-today-title">${todayHl?`Ngày lễ: ${todayHl.name}`:'Trực ca tối hôm nay'}</div>
+        <div class="dsh-today-sub">${nightToday.length+dayToday.length>0?(nightToday.length+dayToday.length)+' người đăng ký':'Chưa có ai đăng ký'}</div>
+      </div>
     </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <div class="kpi" style="margin:0;min-width:130px;padding:12px 16px">
-        <div class="kpi-lbl">Tổng ca tháng</div>
-        <div class="kpi-val" style="font-size:22px">${totCa}</div>
+    <div class="dsh-today-body">
+      ${todayHl?`
+        <div style="font-size:11px;font-weight:800;color:#b45309;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Trực ngày lễ (07:30–17:30)</div>
+        <div style="margin-bottom:10px">${dayToday.length?dayToday.map(n=>`<span class="dsh-name-tag hl">${n}</span>`).join(''):'<span class="dsh-name-tag empty">Chưa có</span>'}</div>
+        <div style="font-size:11px;font-weight:800;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Trực đêm lễ (17:30–22:00)</div>
+        <div>${nightToday.length?nightToday.map(n=>`<span class="dsh-name-tag hl">${n}</span>`).join(''):'<span class="dsh-name-tag empty">Chưa có</span>'}</div>
+      `:`
+        ${todayDow===0&&sunDayToday.length?`<div style="font-size:11px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Trực ngày CN (07:30–17:30)</div><div style="margin-bottom:10px">${sunDayToday.map(n=>`<span class="dsh-name-tag day">${n}</span>`).join('')}</div>`:''}
+        <div style="font-size:11px;font-weight:800;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Ca tối (17:30–22:00)</div>
+        <div>${nightToday.length?nightToday.map(n=>`<span class="dsh-name-tag night">${n}</span>`).join(''):'<span class="dsh-name-tag empty">Chưa có ai đăng ký</span>'}</div>
+      `}
+    </div>
+  </div>
+
+  <!-- TUẦN NÀY -->
+  <div class="dsh-card">
+    <div class="dsh-card-title">Lịch trực tuần này</div>
+    <div style="margin-top:10px">
+      ${weekDays.length?weekDays.map(({d,dw,hl,night,day,sun,isToday})=>{
+        const all=[...new Set([...day,...sun,...night])];
+        const label=`${DOW_LBL[dw]} ${d}/${m}`;
+        return `<div class="dsh-week-item${isToday?' today-row':''}">
+          <div class="dsh-week-label">${label}${hl?` <span style="font-size:9px;background:#ffd6d6;color:#c0392b;border-radius:4px;padding:1px 4px;vertical-align:middle">Lễ</span>`:''}</div>
+          <div class="dsh-week-tags">${!all.length
+            ?'<span class="dsh-mini-tag dsh-mini-none">Chưa có</span>'
+            :[...day.map(n=>`<span class="dsh-mini-tag dsh-mini-day">${n.split(' ').pop()}</span>`),
+              ...sun.map(n=>`<span class="dsh-mini-tag dsh-mini-day">${n.split(' ').pop()}</span>`),
+              ...night.map(n=>`<span class="dsh-mini-tag dsh-mini-night">${n.split(' ').pop()}</span>`)
+            ].join('')
+          }</div>
+        </div>`;
+      }).join(''):'<div style="padding:20px;text-align:center;color:var(--text3);font-size:12px">Không có dữ liệu</div>'}
+    </div>
+  </div>
+
+</div>
+
+<!-- ROW 2: KPI + Tiến độ -->
+<div class="dsh-row">
+
+  <!-- KPI -->
+  <div class="dsh-card">
+    <div class="dsh-card-title">Thống kê tháng ${m}/${y}</div>
+    <div class="dsh-kpi-grid">
+      <div class="dsh-kpi">
+        <div class="dsh-kpi-val" style="color:var(--blue)">${totCa}</div>
+        <div class="dsh-kpi-lbl">Tổng ca</div>
       </div>
-      <div class="kpi g" style="margin:0;min-width:130px;padding:12px 16px">
-        <div class="kpi-lbl">Ngày có trực</div>
-        <div class="kpi-val" style="font-size:22px">${daysWithShift}/${days}</div>
+      <div class="dsh-kpi">
+        <div class="dsh-kpi-val" style="color:var(--teal)">${totNight}</div>
+        <div class="dsh-kpi-lbl">Ca tối</div>
       </div>
-      <div class="kpi a" style="margin:0;min-width:130px;padding:12px 16px">
-        <div class="kpi-lbl">Độ phủ lịch</div>
-        <div class="kpi-val" style="font-size:22px">${pctFilled}%</div>
+      <div class="dsh-kpi">
+        <div class="dsh-kpi-val" style="color:var(--green)">${totSun}</div>
+        <div class="dsh-kpi-lbl">Ngày CN</div>
+      </div>
+      <div class="dsh-kpi">
+        <div class="dsh-kpi-val" style="color:#c0392b">${totHL}</div>
+        <div class="dsh-kpi-lbl">Trực lễ</div>
+      </div>
+    </div>
+    <div style="border-top:1px solid var(--border);padding:12px 18px;display:flex;align-items:center;gap:16px">
+      <div>
+        <svg width="112" height="112" viewBox="0 0 112 112">
+          <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#e2e8f0" stroke-width="10"/>
+          <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${pctColor}" stroke-width="10"
+            stroke-dasharray="${dash.toFixed(1)} ${(circ-dash).toFixed(1)}"
+            stroke-dashoffset="${(circ/4).toFixed(1)}" stroke-linecap="round"/>
+          <text x="${cx}" y="${cy-6}" text-anchor="middle" font-size="18" font-weight="900" fill="${pctColor}" font-family="IBM Plex Mono,monospace">${pctFilled}%</text>
+          <text x="${cx}" y="${cy+12}" text-anchor="middle" font-size="9" fill="#8ea5c0" font-family="Be Vietnam Pro,sans-serif" font-weight="700">PHỦ LỊCH</text>
+        </svg>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">${daysWithShift}/${days} ngày có trực</div>
+        <div style="font-size:12px;color:var(--text3);font-weight:600">${days-daysWithShift} ngày chưa có người đăng ký</div>
+        <div style="font-size:12px;color:var(--text3);font-weight:600;margin-top:4px">${daysLeft} ngày còn lại trong tháng</div>
+        ${upcomingHL.length?`<div style="margin-top:8px;font-size:11.5px;font-weight:700;color:#c0392b">Lễ sắp tới: ${upcomingHL[0].hl.name} (${upcomingHL[0].d}/${m})</div>`:''}
       </div>
     </div>
   </div>
 
-  <div class="dash-grid">
+  <!-- SỐ CA TỪNG NGƯỜI -->
+  <div class="dsh-card">
+    <div class="dsh-card-title">Số ca đã đăng ký</div>
+    <div class="dsh-staff-bar" style="margin-top:10px">
+      ${sortedStaff.map(n=>{
+        const cnt=staffCounts[n];
+        const pct=Math.round(cnt/maxCount*100);
+        const color=cnt===0?'#e2e8f0':cnt>=maxCount?'#16a34a':cnt>=maxCount*0.6?'#2a5aa4':'#93c5fd';
+        const textColor=cnt===0?'var(--red)':cnt>=maxCount?'var(--green)':'var(--blue)';
+        const shortName=n.split(' ').slice(-2).join(' ');
+        return `<div class="dsh-bar-row">
+          <div class="dsh-bar-name" title="${n}">${shortName}</div>
+          <div class="dsh-bar-track"><div class="dsh-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+          <div class="dsh-bar-count" style="color:${textColor}">${cnt||'—'}</div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>
 
-    <!-- HÔM NAY -->
-    <div class="dash-card">
-      <div class="dash-card-head blue">📅 Trực Hôm Nay — ${DOW_FULL[todayDow]} ${nowStr}${todayHl?` 🎌 ${todayHl.name}`:''}</div>
-      <div class="dash-card-body">`;
+</div>
 
-  if(todayHl){
-    html += `<div style="font-size:11.5px;font-weight:800;color:#b45309;margin-bottom:6px">☀️ Trực ngày lễ</div>`;
-    html += dayToday.length
-      ? dayToday.map(n=>`<span class="dash-staff-pill day">☀️ ${n}</span>`).join('')
-      : `<div class="dash-empty" style="padding:8px">Chưa có đăng ký</div>`;
-    html += `<div style="font-size:11.5px;font-weight:800;color:var(--blue);margin:10px 0 6px">🌙 Trực đêm lễ</div>`;
-    html += nightToday.length
-      ? nightToday.map(n=>`<span class="dash-staff-pill holiday">🌙 ${n}</span>`).join('')
-      : `<div class="dash-empty" style="padding:8px">Chưa có đăng ký</div>`;
-  } else {
-    if(todayDow===0 && sunDayToday.length){
-      html += `<div style="font-size:11.5px;font-weight:800;color:var(--green);margin-bottom:6px">☀️ Trực ngày CN</div>`;
-      html += sunDayToday.map(n=>`<span class="dash-staff-pill day">☀️ ${n}</span>`).join('');
-      html += `<div style="font-size:11.5px;font-weight:800;color:var(--blue);margin:10px 0 6px">🌙 Ca tối CN</div>`;
-    }
-    html += nightToday.length
-      ? nightToday.map(n=>`<span class="dash-staff-pill night">🌙 ${n}</span>`).join('')
-      : `<div class="dash-empty">Chưa có ai đăng ký ca tối hôm nay</div>`;
-  }
-  html += `</div></div>
-
-    <!-- TUẦN NÀY -->
-    <div class="dash-card">
-      <div class="dash-card-head teal">📆 Lịch Trực Tuần Này</div>
-      <div class="dash-card-body" style="padding:8px 14px">`;
-
-  if(!weekDays.length){
-    html += `<div class="dash-empty">Không có ngày nào trong tháng này tuần hiện tại.</div>`;
-  } else {
-    weekDays.forEach(({d,dw,hl,night,day,sun,isToday})=>{
-      const allShift=[...new Set([...night,...day,...sun])];
-      html += `<div class="dash-week-row${isToday?' today-highlight':''}">
-        <div class="dash-week-date">
-          <div>${DOW_LBL[dw]}, ${d}/${m}</div>
-          <div class="dow">${isToday?'● Hôm nay':''}${hl?'🎌':''}</div>
-        </div>
-        <div style="flex:1">`;
-      if(!allShift.length){
-        html+=`<span class="dash-staff-pill none" style="font-size:11px;padding:3px 10px">Chưa có</span>`;
-      } else {
-        if(day.length) html+=day.map(n=>`<span class="dash-staff-pill day" style="font-size:11px;padding:3px 10px">☀️${n}</span>`).join('');
-        if(sun.length) html+=sun.map(n=>`<span class="dash-staff-pill day" style="font-size:11px;padding:3px 10px">☀️${n}</span>`).join('');
-        if(night.length) html+=night.map(n=>`<span class="dash-staff-pill night" style="font-size:11px;padding:3px 10px">🌙${n}</span>`).join('');
-      }
-      html+=`</div></div>`;
-    });
-  }
-  html += `</div></div>
-
-  </div><!-- end dash-grid -->
-
-  <!-- CHƯA ĐĂNG KÝ -->
-  <div class="dash-card" style="margin-bottom:20px">
-    <div class="dash-card-head gold">⚠️ Tình Trạng Đăng Ký — Tháng ${m}/${y}</div>
-    <div class="dash-card-body">
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">`;
-
-  const maxCa = Math.max(...unregList.map(x=>x.total), 1);
-  unregList.forEach(({n,total})=>{
-    const pct = Math.round(total/maxCa*100);
-    const cls = total===0?'low':total>=maxCa?'ok':'';
-    const barCls = total===0?'low':total>=maxCa?'full':'';
-    html+=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <span style="font-size:13px;font-weight:800;color:var(--text)">${n}</span>
-        <span class="dash-unreg-count ${cls}">${total===0?'⚠️ Chưa đăng ký':total+' ca'}</span>
+${upcomingHL.length?`
+<!-- NGÀY LỄ SẮP TỚI -->
+<div class="dsh-card dsh-section">
+  <div class="dsh-card-title" style="padding-bottom:10px;border-bottom:1px solid var(--border)">Ngày lễ trong tháng</div>
+  ${upcomingHL.slice(0,4).map(({d,hl})=>`
+    <div class="dsh-hl-item">
+      <span class="dsh-hl-badge">${DOW_LBL[dowOf(y,m,d)]}, ${d}/${m}</span>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:800;color:var(--text)">${hl.name}</div>
+        <div style="font-size:11.5px;color:var(--text3);font-weight:600;margin-top:2px">Hệ số ×${hl.mult||1.5} — Trực ngày: 8h×${hl.mult||1.5} / Trực đêm: 4,5h×${hl.mult||1.5}</div>
       </div>
-      <div class="dash-progress"><div class="dash-progress-bar ${barCls}" style="width:${pct}%"></div></div>
-    </div>`;
-  });
-
-  html += `</div></div></div>`;
-  document.getElementById('dashWrap').innerHTML = html;
+      <span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;background:${hl.mult==='2'?'var(--red-l)':hl.mult==='1'?'var(--green-l)':'var(--gold-l)'};color:${hl.mult==='2'?'var(--red)':hl.mult==='1'?'var(--green)':'var(--amber)'}">×${hl.mult||1.5}</span>
+    </div>
+  `).join('')}
+</div>`:''}
+`;
 }
 </script>
 </body>
