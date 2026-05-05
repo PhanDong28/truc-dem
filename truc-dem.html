@@ -2379,7 +2379,7 @@ async function clearMonth(){
 // ============================================================
 function exportExcel(){
   const m=gM2()||gM(), y=gY2()||gY(), std=gStd2()||gStd();
-  const es = isAdmin()
+  const es = (isAdmin() || isHNCS())
     ? window._staff.filter(n=>!isStaffLocked(n))
     : window._staff.filter(n=>n===myStaffLink()&&!isStaffLocked(n));
   const now = new Date();
@@ -2611,7 +2611,7 @@ function exportExcel(){
 
 function exportHTMLReport(){
   const m=gM2()||gM(), y=gY2()||gY(), std=gStd2()||gStd();
-  const es = isAdmin()
+  const es = (isAdmin() || isHNCS())
     ? window._staff.filter(n=>!isStaffLocked(n))
     : window._staff.filter(n=>n===myStaffLink()&&!isStaffLocked(n));
   const now = new Date();
