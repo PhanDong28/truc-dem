@@ -115,14 +115,15 @@ async function loadAllFromFirebase() {
   }
 }
 
-let _unsubAtt = null, _unsubAttDay = null, _unsubHlReg = null, _unsubHlDayReg = null;
-let _localWriteAtt = false, _localWriteAttDay = false, _localWriteHlReg = false, _localWriteHlDayReg = false;
+let _unsubAtt = null, _unsubAttDay = null, _unsubHlReg = null, _unsubHlDayReg = null, _unsubIconMap = null;
+let _localWriteAtt = false, _localWriteAttDay = false, _localWriteHlReg = false, _localWriteHlDayReg = false, _localWriteIconMap = false;e;
 
 function startRealtimeListeners(m, y, onUpdate) {
   if (_unsubAtt) _unsubAtt();
   if (_unsubAttDay) _unsubAttDay();
   if (_unsubHlReg) _unsubHlReg();
   if (_unsubHlDayReg) _unsubHlDayReg();
+  if (_unsubIconMap) _unsubIconMap();
   const key = m + '_' + y;
 
   _unsubAtt = onSnapshot(doc(db, 'att', key), snap => {
@@ -143,11 +144,26 @@ function startRealtimeListeners(m, y, onUpdate) {
     if (!_localWriteHlReg) { if (onUpdate) onUpdate(); }
     _localWriteHlReg = false;
   });
-  _unsubHlDayReg = onSnapshot(doc(db, 'hlDayReg', key), snap => {
+_unsubHlDayReg = onSnapshot(doc(db, 'hlDayReg', key), snap => {
     if (snap.exists()) window._hlDayReg[key] = snap.data();
     else delete window._hlDayReg[key];
     if (!_localWriteHlDayReg) { if (onUpdate) onUpdate(); }
     _localWriteHlDayReg = false;
+  });
+
+  _unsubIconMap = onSnapshot(doc(db, 'config', 'iconMap'), snap => {
+    if (snap.exists()) window._iconMap = snap.data().map || {};
+    else window._iconMap = {};
+    if (!_localWriteIconMap) {
+      if (window._staff) {
+        window._staff.forEach(n => {
+          if (window._patchAllCellsIconFn) window._patchAllCellsIconFn(n);
+        });
+      }
+      if (window._updateMyIconBtnFn) window._updateMyIconBtnFn();
+      if (window._renderStaffFn) window._renderStaffFn();
+    }
+    _localWriteIconMap = false;
   });
 }
 window._setLocalWrite = (type) => {
@@ -155,6 +171,7 @@ window._setLocalWrite = (type) => {
   if(type==='attDay') _localWriteAttDay=true;
   if(type==='hlReg') _localWriteHlReg=true;
   if(type==='hlDayReg') _localWriteHlDayReg=true;
+  if(type==='iconMap') _localWriteIconMap=true;
 };
 
 async function saveAtt(m, y) {
@@ -221,9 +238,10 @@ async function saveHolidays() {
   try { await fbSet('config', 'holidays', { list: window._holidays }); showSyncStatus('online'); }
   catch(e) { showSyncStatus('error'); }
 }
-  async function saveIconMap() {
+ async function saveIconMap() {
   showSyncStatus('saving');
   try {
+    _localWriteIconMap = true;
     await fbSet('config', 'iconMap', { map: window._iconMap });
     showSyncStatus('online');
   } catch(e) { showSyncStatus('error'); }
@@ -3297,6 +3315,9 @@ function updateMyIconBtn() {
     btn.style.display = 'none';
   }
 }
+window._patchAllCellsIconFn = _patchAllCellsIcon;
+window._updateMyIconBtnFn = updateMyIconBtn;
+window._renderStaffFn = renderStaff;
 </script>
   <div class="modal-bg hidden" id="modalIcon">
   <div class="modal" style="max-width:460px">
