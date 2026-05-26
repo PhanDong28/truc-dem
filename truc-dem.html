@@ -150,7 +150,11 @@ _unsubHlDayReg = onSnapshot(doc(db, 'hlDayReg', key), snap => {
     if (!_localWriteHlDayReg) { if (onUpdate) onUpdate(); }
     _localWriteHlDayReg = false;
   });
-
+if (window._unsubSwap) window._unsubSwap();
+  window._unsubSwap = onSnapshot(collection(db, 'swapRequests'), snap => {
+    window._swapRequests = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (window._onSwapUpdate) window._onSwapUpdate(window._swapRequests);
+  });
   _unsubIconMap = onSnapshot(doc(db, 'config', 'iconMap'), snap => {
     if (snap.exists()) window._iconMap = snap.data().map || {};
     else window._iconMap = {};
@@ -271,6 +275,23 @@ async function fetchLogs(limitN=200) {
 async function deleteLogDoc(id){
   await deleteDoc(doc(db,'changelog',id));
 }
+  async function saveSwapRequest(req) {
+  await setDoc(doc(db, 'swapRequests', req.id), req);
+}
+async function updateSwapRequest(id, data) {
+  await setDoc(doc(db, 'swapRequests', id), data, { merge: true });
+}
+async function fetchSwapRequests() {
+  const snap = await getDocs(collection(db, 'swapRequests'));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+async function deleteSwapRequest(id) {
+  await deleteDoc(doc(db, 'swapRequests', id));
+}
+window._saveSwapRequest   = saveSwapRequest;
+window._updateSwapRequest = updateSwapRequest;
+window._fetchSwapRequests = fetchSwapRequests;
+window._deleteSwapRequest = deleteSwapRequest;
 window._writeLog     = writeLog;
 window._fetchLogs    = fetchLogs;
 window._deleteLogDoc = deleteLogDoc;
@@ -749,6 +770,10 @@ td.dc.cell-active .chk { color: #fff !important; }
   <button class="tab" id="tabHoliday" onclick="switchTab('t5',this)" data-admin-only>Ngày Nghỉ Lễ</button>
   <button class="tab" id="tabStaff" onclick="switchTab('t3',this)" data-admin-only>Quản Lý KTV</button>
   <button class="tab" id="tabAcc" onclick="switchTab('t4',this)" data-admin-only>Tài Khoản</button>
+  <button class="tab" id="tabSwap" onclick="switchTab('tSwap',this)">
+    🔄 Đổi Ca
+    <span id="swapBadge" style="display:none;background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:800;margin-left:4px">0</span>
+  </button>
   <button class="tab" id="tabLog" onclick="switchTab('t6',this)" data-superadmin-only style="display:none">Lịch Sử</button>
 </nav>
 
@@ -897,6 +922,22 @@ td.dc.cell-active .chk { color: #fff !important; }
 </div>
 
 </div>
+</div>
+  <div id="tSwap" class="panel">
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <div style="font-size:15px;font-weight:900;color:var(--text)">🔄 Đổi Ca Trực</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:3px">Gửi yêu cầu – người kia đồng ý là swap tự động, realtime</div>
+      </div>
+      <button class="btn btn-primary" onclick="openSwapModal()">➕ Tạo yêu cầu đổi ca</button>
+    </div>
+    <div class="card-body">
+      <div id="swapIncoming" style="margin-bottom:20px"></div>
+      <div id="swapOutgoing" style="margin-bottom:20px"></div>
+      <div id="swapHistory"></div>
+    </div>
+  </div>
 </div>
 <div id="t6" class="panel">
   <div class="card">
@@ -1052,7 +1093,42 @@ td.dc.cell-active .chk { color: #fff !important; }
     <div class="dialog-actions" id="dialogActions"></div>
   </div>
 </div>
+<div class="modal-bg hidden" id="modalSwap">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-title">🔄 Tạo Yêu Cầu Đổi Ca</div>
 
+    <div class="modal-field">
+      <label>Ngày CA CỦA BẠN muốn nhường</label>
+      <input type="date" id="swapMyDate" oninput="updateSwapPreview()">
+    </div>
+    <div id="swapMyShiftInfo" style="display:none;margin-bottom:14px;padding:10px 14px;border-radius:8px;font-size:13px;font-weight:700"></div>
+
+    <div class="modal-field">
+      <label>Đổi với KTV nào</label>
+      <select id="swapTargetPerson" onchange="updateSwapPreview()">
+        <option value="">-- Chọn KTV --</option>
+      </select>
+    </div>
+
+    <div class="modal-field">
+      <label>Ngày CA CỦA HỌ bạn muốn nhận <span style="color:var(--text3);font-weight:500">(để trống = đổi 1 chiều)</span></label>
+      <input type="date" id="swapTheirDate" oninput="updateSwapPreview()">
+    </div>
+    <div id="swapTheirShiftInfo" style="display:none;margin-bottom:14px;padding:10px 14px;border-radius:8px;font-size:13px;font-weight:700"></div>
+
+    <div class="modal-field">
+      <label>Lý do xin đổi ca</label>
+      <textarea id="swapReason" placeholder="VD: Bận việc gia đình, có hẹn..." style="min-height:65px"></textarea>
+    </div>
+
+    <div id="swapModalPreview" style="display:none;padding:12px 16px;background:var(--blue-l);border:1.5px solid var(--blue-m);border-radius:10px;font-size:13px;color:var(--blue);margin-bottom:4px;line-height:1.8"></div>
+
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modalSwap')">Hủy</button>
+      <button class="btn btn-primary" onclick="submitSwapRequest()">📤 Gửi yêu cầu</button>
+    </div>
+  </div>
+</div>
 <div id="toastWrap"></div>
 
 <script>
@@ -1461,6 +1537,15 @@ function initApp(){
 }
   updateMyIconBtn();
   renderAll();
+  // Swap feature
+  window._swapRequests = [];
+  initSwapListener();
+  if (window._fetchSwapRequests) {
+    window._fetchSwapRequests().then(reqs => {
+      window._swapRequests = reqs || [];
+      updateSwapBadge();
+    });
+  }
 }
 
 // ============================================================
@@ -1568,6 +1653,14 @@ function switchTab(id, btn){
     btn.classList.add('active');
     renderDashboard(); 
     return; 
+  }
+  if (id === 'tSwap') {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    document.getElementById('tSwap').classList.add('active');
+    btn.classList.add('active');
+    renderSwapPanel();
+    return;
   }
   if((id==='t3'||id==='t4'||id==='t5') && !isAdmin()) return;
   if(id==='t6' && !isVipUser()) return;
@@ -3318,6 +3411,464 @@ function updateMyIconBtn() {
 window._patchAllCellsIconFn = _patchAllCellsIcon;
 window._updateMyIconBtnFn = updateMyIconBtn;
 window._renderStaffFn = renderStaff;
+  // ============================================================
+// ĐỔI CA TRỰC — SWAP SHIFTS
+// ============================================================
+
+window._swapRequests = [];
+
+function initSwapListener() {
+  window._onSwapUpdate = function(reqs) {
+    window._swapRequests = reqs || [];
+    updateSwapBadge();
+    if (document.getElementById('tSwap').classList.contains('active')) {
+      renderSwapPanel();
+    }
+  };
+}
+
+function updateSwapBadge() {
+  const link = myStaffLink();
+  const badge = document.getElementById('swapBadge');
+  if (!badge) return;
+  const count = (window._swapRequests || []).filter(r =>
+    r.status === 'pending' && (r.targetStaff === link || isAdmin())
+  ).length;
+  if (count > 0) { badge.style.display = 'inline'; badge.textContent = count; }
+  else badge.style.display = 'none';
+}
+
+function openSwapModal() {
+  const link = myStaffLink();
+  if (!link && !isAdmin()) {
+    dlgAlert('Tài khoản chưa liên kết KTV. Liên hệ Admin.', { title: 'Chưa liên kết', icon: '⚠️', iconCls: 'ic-warn' });
+    return;
+  }
+  const myName = link || window._staff[0];
+  const sel = document.getElementById('swapTargetPerson');
+  sel.innerHTML = '<option value="">-- Chọn KTV --</option>' +
+    window._staff.filter(n => !isStaffLocked(n) && n !== myName)
+      .map(n => `<option value="${n}">${n}</option>`).join('');
+  document.getElementById('swapMyDate').value = '';
+  document.getElementById('swapTheirDate').value = '';
+  document.getElementById('swapReason').value = '';
+  document.getElementById('swapMyShiftInfo').style.display = 'none';
+  document.getElementById('swapTheirShiftInfo').style.display = 'none';
+  document.getElementById('swapModalPreview').style.display = 'none';
+  document.getElementById('modalSwap').classList.remove('hidden');
+}
+
+function swapShiftLabel(type) {
+  if (type === 'toi')   return '🌙 Tối T2–T6 (17:30–22:00)';
+  if (type === 't7')    return '🌙 Tối T7 (16:00–22:00)';
+  if (type === 'toicn') return '🌙 Tối CN (17:30–22:00)';
+  return type || '';
+}
+
+function updateSwapPreview() {
+  const link      = myStaffLink() || (isAdmin() ? window._staff[0] : '');
+  const myDateVal = document.getElementById('swapMyDate').value;
+  const target    = document.getElementById('swapTargetPerson').value;
+  const theirDateVal = document.getElementById('swapTheirDate').value;
+
+  // --- Info ca của mình ---
+  const myInfoEl = document.getElementById('swapMyShiftInfo');
+  if (myDateVal && link) {
+    const [y, m, d] = myDateVal.split('-').map(Number);
+    const type  = getC(m, y, link, d);
+    const isDCN = dowOf(y, m, d) === 0 && getCDay(m, y, link, d);
+    const hl    = getHolidayForDate(y, m, d);
+    if (type || isDCN || hl) {
+      let txt = hl ? `🎌 Ngày lễ: ${hl.name}` : '';
+      if (!hl && isDCN) txt += '☀️ Ngày CN ';
+      if (!hl && type)  txt += swapShiftLabel(type);
+      myInfoEl.textContent = 'Ca của bạn: ' + txt.trim();
+      myInfoEl.style.background = 'var(--blue-l)';
+      myInfoEl.style.color = 'var(--blue)';
+    } else {
+      myInfoEl.textContent = '⚠️ Bạn không có ca nào ngày này!';
+      myInfoEl.style.background = 'var(--red-l)';
+      myInfoEl.style.color = 'var(--red)';
+    }
+    myInfoEl.style.display = '';
+  } else {
+    myInfoEl.style.display = 'none';
+  }
+
+  // --- Info ca của người kia ---
+  const theirInfoEl = document.getElementById('swapTheirShiftInfo');
+  if (theirDateVal && target) {
+    const [y2, m2, d2] = theirDateVal.split('-').map(Number);
+    const type2  = getC(m2, y2, target, d2);
+    const isDCN2 = dowOf(y2, m2, d2) === 0 && getCDay(m2, y2, target, d2);
+    const hl2    = getHolidayForDate(y2, m2, d2);
+    if (type2 || isDCN2 || hl2) {
+      let txt2 = hl2 ? `🎌 Ngày lễ: ${hl2.name}` : '';
+      if (!hl2 && isDCN2) txt2 += '☀️ Ngày CN ';
+      if (!hl2 && type2)  txt2 += swapShiftLabel(type2);
+      theirInfoEl.textContent = `Ca của ${target}: ` + txt2.trim();
+      theirInfoEl.style.background = 'var(--green-l)';
+      theirInfoEl.style.color = 'var(--green)';
+    } else {
+      theirInfoEl.textContent = `ℹ️ ${target} không có ca ngày này (đổi 1 chiều)`;
+      theirInfoEl.style.background = 'var(--surface)';
+      theirInfoEl.style.color = 'var(--text3)';
+    }
+    theirInfoEl.style.display = '';
+  } else {
+    theirInfoEl.style.display = 'none';
+  }
+
+  // --- Preview tóm tắt ---
+  const previewEl = document.getElementById('swapModalPreview');
+  if (myDateVal && target) {
+    const [y, m, d] = myDateVal.split('-').map(Number);
+    let html = `<strong>📋 Tóm tắt yêu cầu:</strong><br>`;
+    html += `• Bạn (<strong>${link}</strong>) nhường ca ngày <strong>${d}/${m}/${y}</strong><br>`;
+    html += `• Gửi đến: <strong>${target}</strong><br>`;
+    if (theirDateVal) {
+      const [y2, m2, d2] = theirDateVal.split('-').map(Number);
+      html += `• Đổi lấy ca ngày <strong>${d2}/${m2}/${y2}</strong> của ${target}`;
+    } else {
+      html += `• Đổi 1 chiều – bạn nghỉ, ${target} trực thay`;
+    }
+    previewEl.innerHTML = html;
+    previewEl.style.display = '';
+  } else {
+    previewEl.style.display = 'none';
+  }
+}
+
+async function submitSwapRequest() {
+  const link         = myStaffLink() || (isAdmin() ? window._staff[0] : '');
+  const myDateVal    = document.getElementById('swapMyDate').value;
+  const target       = document.getElementById('swapTargetPerson').value;
+  const theirDateVal = document.getElementById('swapTheirDate').value;
+  const reason       = document.getElementById('swapReason').value.trim();
+
+  if (!link) { await dlgAlert('Tài khoản chưa liên kết KTV!', { icon: '⚠️', iconCls: 'ic-warn' }); return; }
+  if (!myDateVal) { await dlgAlert('Chọn ngày CA CỦA BẠN muốn nhường!', { icon: '📅', iconCls: 'ic-warn' }); return; }
+  if (!target)    { await dlgAlert('Chọn KTV muốn đổi ca!', { icon: '👤', iconCls: 'ic-warn' }); return; }
+
+  const [y, m, d] = myDateVal.split('-').map(Number);
+  const myShift = getC(m, y, link, d);
+  const myDayCN = dowOf(y, m, d) === 0 && getCDay(m, y, link, d);
+  if (!myShift && !myDayCN) {
+    await dlgAlert(`Bạn không có ca trực nào ngày <strong>${d}/${m}/${y}</strong>!`, { icon: '⚠️', iconCls: 'ic-warn' });
+    return;
+  }
+
+  // Kiểm tra đã có yêu cầu pending cho ngày này chưa
+  const dupCheck = (window._swapRequests || []).find(r =>
+    r.status === 'pending' && r.fromStaff === link && r.myDate === myDateVal
+  );
+  if (dupCheck) {
+    await dlgAlert('Bạn đã có yêu cầu đổi ca đang chờ cho ngày này!', { icon: '⚠️', iconCls: 'ic-warn' });
+    return;
+  }
+
+  let theirShift = null, theirDayCN = false;
+  if (theirDateVal) {
+    const [y2, m2, d2] = theirDateVal.split('-').map(Number);
+    theirShift = getC(m2, y2, target, d2);
+    theirDayCN = dowOf(y2, m2, d2) === 0 && getCDay(m2, y2, target, d2);
+  }
+
+  const req = {
+    id:           'swap_' + Date.now(),
+    status:       'pending',
+    createdAt:    Date.now(),
+    updatedAt:    Date.now(),
+    fromStaff:    link,
+    fromUserId:   currentUser.id,
+    fromUserName: currentUser.name,
+    myDate:       myDateVal,
+    myShift:      myShift || null,
+    myDayCN:      !!myDayCN,
+    targetStaff:  target,
+    theirDate:    theirDateVal || null,
+    theirShift:   theirShift || null,
+    theirDayCN:   !!theirDayCN,
+    reason:       reason,
+    month:        m,
+    year:         y,
+  };
+
+  await window._saveSwapRequest(req);
+  closeModal('modalSwap');
+  showToast(`Đã gửi yêu cầu đổi ca đến ${target} ✉️`, 'success');
+
+  if (window._writeLog) window._writeLog({
+    userId: currentUser.id, userName: currentUser.name,
+    action: 'swap_request', target: target,
+    detail: `Gửi yêu cầu đổi ca ${d}/${m}/${y} → ${target}`,
+    month: m, year: y
+  });
+}
+
+async function respondSwap(reqId, accept) {
+  const req = (window._swapRequests || []).find(r => r.id === reqId);
+  if (!req || req.status !== 'pending') { showToast('Yêu cầu không còn hợp lệ', 'warn'); return; }
+
+  const link = myStaffLink();
+  if (!isAdmin() && req.targetStaff !== link) {
+    await dlgAlert('Bạn không có quyền xử lý yêu cầu này!', { icon: '🔒', iconCls: 'ic-danger' }); return;
+  }
+
+  if (!accept) {
+    const ok = await dlgConfirm(
+      `Từ chối yêu cầu đổi ca từ <strong>${req.fromStaff}</strong>?`,
+      { title: 'Từ chối', icon: '❌', iconCls: 'ic-danger', okLabel: 'Từ chối', okCls: 'btn-red' }
+    );
+    if (!ok) return;
+    await window._updateSwapRequest(reqId, { status: 'rejected', updatedAt: Date.now() });
+    showToast('Đã từ chối yêu cầu đổi ca', 'info');
+    if (window._writeLog) window._writeLog({
+      userId: currentUser.id, userName: currentUser.name,
+      action: 'swap_rejected', target: req.fromStaff,
+      detail: `Từ chối đổi ca ngày ${req.myDate}`, month: req.month, year: req.year
+    });
+    return;
+  }
+
+  const ok = await dlgConfirm(
+    `Đồng ý đổi ca với <strong>${req.fromStaff}</strong>?<br>
+     <span style="font-size:12px;color:var(--text2)">Ca sẽ được hoán đổi tự động ngay lập tức trên lịch.</span>`,
+    { title: 'Xác nhận đổi ca', icon: '🔄', iconCls: 'ic-info', okLabel: '✅ Đồng ý & Swap', okCls: 'btn-primary' }
+  );
+  if (!ok) return;
+  await executeSwap(req);
+}
+
+async function executeSwap(req) {
+  const [myY, myM, myD] = req.myDate.split('-').map(Number);
+
+  // Lấy ca hiện tại (tại thời điểm swap, có thể đã đổi rồi)
+  const fromShift  = getC(myM, myY, req.fromStaff, myD);
+  const fromDayCN  = dowOf(myY, myM, myD) === 0 && getCDay(myM, myY, req.fromStaff, myD);
+  const targetShiftSameDay = getC(myM, myY, req.targetStaff, myD);
+
+  // Xóa ca của người GỬI ở ngày đó
+  setC(myM, myY, req.fromStaff, myD, null);
+  // Gán ca đó cho người NHẬN
+  if (fromShift) setC(myM, myY, req.targetStaff, myD, fromShift);
+
+  // Xử lý ca ngày CN nếu có
+  if (fromDayCN) {
+    const k = mk(myM, myY);
+    if (!window._attDay[k]) window._attDay[k] = {};
+    if (!window._attDay[k][req.fromStaff]) window._attDay[k][req.fromStaff] = {};
+    delete window._attDay[k][req.fromStaff][myD];
+    if (!window._attDay[k][req.targetStaff]) window._attDay[k][req.targetStaff] = {};
+    window._attDay[k][req.targetStaff][myD] = true;
+    if (window._saveAttDay) await window._saveAttDay(myM, myY);
+  }
+
+  // Nếu đổi 2 chiều (có theirDate)
+  if (req.theirDate) {
+    const [theirY, theirM, theirD] = req.theirDate.split('-').map(Number);
+    const targetShift = getC(theirM, theirY, req.targetStaff, theirD);
+    const targetDayCN = dowOf(theirY, theirM, theirD) === 0 && getCDay(theirM, theirY, req.targetStaff, theirD);
+
+    // Xóa ca của người NHẬN ở ngày của họ
+    setC(theirM, theirY, req.targetStaff, theirD, null);
+    // Gán ca đó cho người GỬI
+    if (targetShift) setC(theirM, theirY, req.fromStaff, theirD, targetShift);
+
+    if (targetDayCN) {
+      const k2 = mk(theirM, theirY);
+      if (!window._attDay[k2]) window._attDay[k2] = {};
+      if (!window._attDay[k2][req.targetStaff]) window._attDay[k2][req.targetStaff] = {};
+      delete window._attDay[k2][req.targetStaff][theirD];
+      if (!window._attDay[k2][req.fromStaff]) window._attDay[k2][req.fromStaff] = {};
+      window._attDay[k2][req.fromStaff][theirD] = true;
+      if (window._saveAttDay) await window._saveAttDay(theirM, theirY);
+    }
+  }
+
+  // Cập nhật trạng thái request
+  await window._updateSwapRequest(req.id, {
+    status: 'accepted',
+    updatedAt: Date.now(),
+    acceptedBy: currentUser.name,
+  });
+
+  // Ghi log
+  if (window._writeLog) window._writeLog({
+    userId: currentUser.id, userName: currentUser.name,
+    action: 'swap_accepted', target: req.fromStaff,
+    detail: `Đổi ca thành công: ${req.fromStaff} ↔ ${req.targetStaff} | Ngày ${req.myDate}`,
+    month: req.month, year: req.year
+  });
+
+  renderAll();
+  showToast(`🎉 Đổi ca thành công! ${req.fromStaff} ↔ ${req.targetStaff}`, 'success');
+}
+
+async function cancelSwap(reqId) {
+  const ok = await dlgConfirmDanger('Hủy yêu cầu đổi ca này?', { title: 'Hủy yêu cầu', okLabel: 'Hủy' });
+  if (!ok) return;
+  await window._updateSwapRequest(reqId, { status: 'cancelled', updatedAt: Date.now() });
+  showToast('Đã hủy yêu cầu', 'info');
+}
+
+async function deleteSwapReqAdmin(id) {
+  const ok = await dlgConfirmDanger('Xóa record đổi ca này?', { okLabel: 'Xóa' });
+  if (!ok) return;
+  await window._deleteSwapRequest(id);
+  showToast('Đã xóa', 'info');
+}
+
+function renderSwapPanel() {
+  const link = myStaffLink();
+  const all  = (window._swapRequests || []);
+  const now  = Date.now();
+  const DOW_VN = ['CN','T2','T3','T4','T5','T6','T7'];
+
+  function fmtDate(ds) {
+    if (!ds) return '—';
+    const [y, m, d] = ds.split('-').map(Number);
+    return `${DOW_VN[dowOf(y,m,d)]}, ${String(d).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y}`;
+  }
+  function fmtTime(ts) {
+    const dt = new Date(ts);
+    return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')} `
+         + `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+  }
+  function statusBadge(s) {
+    const map = {
+      pending:   ['⏳ Chờ xác nhận', '#fef7e8', '#d97706'],
+      accepted:  ['✅ Đã đổi thành công', '#f0fdf4', '#16a34a'],
+      rejected:  ['❌ Từ chối', '#fef2f2', '#dc2626'],
+      cancelled: ['🚫 Đã hủy', '#f7f9fd', '#8ea5c0'],
+    };
+    const [lbl, bg, col] = map[s] || ['?','#fff','#000'];
+    return `<span style="display:inline-block;padding:3px 11px;border-radius:12px;
+      font-size:11.5px;font-weight:800;background:${bg};color:${col}">${lbl}</span>`;
+  }
+
+  function makeCard(req, mode) {
+    const isMine   = req.fromStaff === link;
+    const isTarget = req.targetStaff === link;
+    const borderCol = req.status==='pending'?'var(--gold)':req.status==='accepted'?'var(--green)':req.status==='rejected'?'var(--red)':'var(--border2)';
+    const canRespond = req.status === 'pending' && (isAdmin() || isTarget);
+    const canCancel  = req.status === 'pending' && (isAdmin() || isMine);
+
+    return `<div style="background:var(--white);border:1.5px solid var(--border);
+      border-left:4px solid ${borderCol};border-radius:12px;
+      padding:16px 20px;margin-bottom:12px">
+
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;
+        gap:10px;flex-wrap:wrap;margin-bottom:12px">
+        <div>
+          <div style="font-size:14px;font-weight:900;color:var(--text);margin-bottom:3px">
+            🔄 ${req.fromStaff} → ${req.targetStaff}
+          </div>
+          <div style="font-size:11.5px;color:var(--text3);font-weight:600">
+            Gửi lúc ${fmtTime(req.createdAt)}
+            ${req.updatedAt !== req.createdAt ? ' · Cập nhật ' + fmtTime(req.updatedAt) : ''}
+          </div>
+        </div>
+        ${statusBadge(req.status)}
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr ${req.theirDate?'1fr':'0fr'};gap:12px;margin-bottom:12px">
+        <div style="background:var(--blue-l);border-radius:10px;padding:12px 14px">
+          <div style="font-size:10px;font-weight:800;color:var(--blue);text-transform:uppercase;
+            letter-spacing:.7px;margin-bottom:5px">📤 Nhường ca này</div>
+          <div style="font-weight:800;font-size:13px">${req.fromStaff}</div>
+          <div style="font-size:12.5px;color:var(--text2);margin-top:4px;line-height:1.7">
+            📅 ${fmtDate(req.myDate)}
+            ${req.myShift ? '<br>' + swapShiftLabel(req.myShift) : ''}
+            ${req.myDayCN ? '<br>☀️ Ca ngày CN' : ''}
+          </div>
+        </div>
+        ${req.theirDate ? `
+        <div style="background:var(--green-l);border-radius:10px;padding:12px 14px">
+          <div style="font-size:10px;font-weight:800;color:var(--green);text-transform:uppercase;
+            letter-spacing:.7px;margin-bottom:5px">📥 Đổi lấy ca này</div>
+          <div style="font-weight:800;font-size:13px">${req.targetStaff}</div>
+          <div style="font-size:12.5px;color:var(--text2);margin-top:4px;line-height:1.7">
+            📅 ${fmtDate(req.theirDate)}
+            ${req.theirShift ? '<br>' + swapShiftLabel(req.theirShift) : ''}
+            ${req.theirDayCN ? '<br>☀️ Ca ngày CN' : ''}
+          </div>
+        </div>` : `
+        <div style="background:var(--surface);border-radius:10px;padding:12px 14px;
+          border:1.5px dashed var(--border2)">
+          <div style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;
+            letter-spacing:.7px;margin-bottom:5px">ℹ️ Đổi 1 chiều</div>
+          <div style="font-size:12px;color:var(--text3)">
+            Không yêu cầu ca đổi lại
+          </div>
+        </div>`}
+      </div>
+
+      ${req.reason ? `<div style="background:var(--surface);border-radius:7px;
+        padding:8px 12px;font-size:12.5px;color:var(--text2);margin-bottom:12px">
+        💬 <strong>Lý do:</strong> ${req.reason}
+      </div>` : ''}
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${canRespond ? `
+          <button class="btn btn-primary" onclick="respondSwap('${req.id}',true)">
+            ✅ Đồng ý & Swap ngay
+          </button>
+          <button class="btn btn-red" onclick="respondSwap('${req.id}',false)">
+            ❌ Từ chối
+          </button>` : ''}
+        ${canCancel ? `
+          <button class="btn" onclick="cancelSwap('${req.id}')">🚫 Hủy yêu cầu</button>` : ''}
+        ${isAdmin() && req.status !== 'pending' ? `
+          <button class="btn btn-sm" style="opacity:.5" title="Xóa record"
+            onclick="deleteSwapReqAdmin('${req.id}')">🗑</button>` : ''}
+      </div>
+    </div>`;
+  }
+
+  // --- INCOMING: chờ MÌNH xác nhận ---
+  const incoming = all.filter(r =>
+    r.status === 'pending' && (r.targetStaff === link || isAdmin())
+  ).sort((a,b) => b.createdAt - a.createdAt);
+
+  document.getElementById('swapIncoming').innerHTML = incoming.length
+    ? `<div style="font-size:14px;font-weight:900;color:var(--text);
+        margin-bottom:12px;display:flex;align-items:center;gap:8px">
+        📬 Chờ bạn xác nhận
+        <span style="background:var(--red);color:#fff;border-radius:10px;
+          padding:1px 8px;font-size:11px;font-weight:800">${incoming.length}</span>
+      </div>
+      ${incoming.map(r => makeCard(r, 'incoming')).join('')}`
+    : `<div style="padding:14px 18px;background:var(--green-l);border-radius:10px;
+        font-size:13px;color:var(--green);font-weight:700;border:1px solid var(--green-m)">
+        ✅ Không có yêu cầu nào đang chờ bạn
+      </div>`;
+
+  // --- OUTGOING: mình đã gửi, còn pending ---
+  const outgoing = all.filter(r =>
+    r.status === 'pending' && r.fromStaff === link
+  ).sort((a,b) => b.createdAt - a.createdAt);
+
+  document.getElementById('swapOutgoing').innerHTML = outgoing.length
+    ? `<div style="font-size:14px;font-weight:900;color:var(--text);
+        margin-bottom:12px;margin-top:4px">📤 Yêu cầu bạn đã gửi (đang chờ)</div>
+       ${outgoing.map(r => makeCard(r, 'outgoing')).join('')}`
+    : '';
+
+  // --- HISTORY: 7 ngày gần nhất, đã xử lý ---
+  const hist = all.filter(r =>
+    r.status !== 'pending' &&
+    (isAdmin() || r.fromStaff === link || r.targetStaff === link) &&
+    (now - (r.updatedAt || r.createdAt)) < 7 * 24 * 3600 * 1000
+  ).sort((a,b) => b.updatedAt - a.updatedAt).slice(0, 15);
+
+  document.getElementById('swapHistory').innerHTML = hist.length
+    ? `<div style="font-size:14px;font-weight:900;color:var(--text);
+        margin-bottom:12px;padding-top:16px;border-top:1px solid var(--border)">
+        📋 Lịch sử 7 ngày gần nhất</div>
+       ${hist.map(r => makeCard(r, 'history')).join('')}`
+    : '';
+}
 </script>
   <div class="modal-bg hidden" id="modalIcon">
   <div class="modal" style="max-width:460px">
