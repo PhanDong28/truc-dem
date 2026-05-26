@@ -932,7 +932,6 @@ td.dc.cell-active .chk { color: #fff !important; }
         <div style="font-size:12px;color:var(--text3);margin-top:3px">Gửi yêu cầu – người kia đồng ý được</div>
       </div>
       <button class="btn btn-primary" onclick="openSwapModal()">➕ Tạo yêu cầu đổi ca</button>
-      <button class="btn btn-gold" onclick="openOpenShiftModal()">📢 Nhường ca </button>
     </div>
     <div class="card-body">
       <div id="swapIncoming" style="margin-bottom:20px"></div>
@@ -1130,7 +1129,7 @@ td.dc.cell-active .chk { color: #fff !important; }
       <div class="modal-field" style="margin-bottom:10px">
         <label>KTV muốn đổi với</label>
         <select id="swapTargetPerson" onchange="loadTheirShifts()" style="width:100%;height:36px;padding:0 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-family:inherit;font-size:13px;font-weight:600;color:var(--text);background:var(--surface);outline:none">
-          <option value="">-- Chọn KTV --</option>
+          <option value=""> Nhường cho tất cả </option>
         </select>
       </div>
       <div id="theirShiftList" style="display:flex;flex-wrap:wrap;gap:6px">
@@ -3673,7 +3672,10 @@ async function submitSwapRequest() {
 
   if (!link)        { await dlgAlert('Tài khoản chưa liên kết KTV!', { icon: '⚠️', iconCls: 'ic-warn' }); return; }
   if (!_swapMyDate) { await dlgAlert('Chọn ca của bạn muốn nhường!', { icon: '📅', iconCls: 'ic-warn' }); return; }
-  if (!target)      { await dlgAlert('Chọn KTV muốn đổi ca!', { icon: '👤', iconCls: 'ic-warn' }); return; }
+ const req = {
+    id:           'swap_' + Date.now(),
+    status:       'pending',
+      isOpen:       !target,
 
   // Kiểm tra trùng
   const dupCheck = (window._swapRequests || []).find(r =>
@@ -3697,7 +3699,7 @@ async function submitSwapRequest() {
     myDate:       _swapMyDate.date,
     myShiftType:  _swapMyDate.type,
     myShiftLabel: _swapMyDate.label,
-    targetStaff:  target,
+    targetStaff:  target || null,
     theirDate:    _swapTheirDate ? _swapTheirDate.date : null,
     theirShiftType: _swapTheirDate ? _swapTheirDate.type : null,
     theirShiftLabel: _swapTheirDate ? _swapTheirDate.label : null,
@@ -3876,7 +3878,7 @@ function renderSwapPanel() {
             🔄 ${req.fromStaff} → ${req.targetStaff}
           </div>
           <div style="font-size:11px;color:var(--text3);font-weight:600">
-            ${fmtTime(req.createdAt)}${req.updatedAt !== req.createdAt ? ' · cập nhật ' + fmtTime(req.updatedAt) : ''}
+  🕐 Đăng: ${fmtTime(req.createdAt)}${req.updatedAt !== req.createdAt ? ' · cập nhật ' + fmtTime(req.updatedAt) : ''}
           </div>
         </div>
         ${statusBadge(req.status)}
@@ -3894,7 +3896,7 @@ function renderSwapPanel() {
           <div style="font-size:11.5px;color:var(--text3);margin-top:2px">📅 ${fmtDate(req.theirDate)}</div>
         </div>` : `
         <div style="background:var(--surface);border-radius:8px;padding:10px 12px;border:1.5px dashed var(--border2)">
-          <div style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">ℹ️ Đổi 1 chiều</div>
+          <div style="font-size:12px;color:var(--text3)">${req.isOpen ? '📢 Mở cho tất cả — ai nhận trước được' : req.targetStaff + ' trực thay, không cần đổi lại'}</div>
           <div style="font-size:12px;color:var(--text3)">${req.targetStaff} trực thay, không cần đổi lại</div>
         </div>`}
       </div>
@@ -3934,14 +3936,14 @@ function renderSwapPanel() {
         return `<div style="background:var(--white);border:1.5px solid var(--gold-m);border-left:4px solid var(--gold);border-radius:12px;padding:12px 16px;margin-bottom:8px">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap">
             <div>
-              <div style="font-size:13px;font-weight:900;color:var(--text)">📢 ${r.fromStaff} nhường ca</div>
-              <div style="font-size:12px;color:var(--text2);margin-top:3px">${r.myShiftLabel} — 📅 ${fmtDate(r.myDate)}</div>
+              <div style="font-size:13px;font-weight:900;color:var(--text)"> ${r.fromStaff} nhường ca</div>
+              <div style="font-size:12px;color:var(--text2);margin-top:3px">${r.myShiftLabel} — ${fmtDate(r.myDate)}</div>
               ${r.reason ? `<div style="font-size:11.5px;color:var(--text3);margin-top:3px">💬 ${r.reason}</div>` : ''}
             </div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-              ${!isOwn ? `<button class="btn btn-primary btn-sm" onclick="claimOpenShift('${r.id}')">🙋 Nhận ca này!</button>` : ''}
+              ${!isOwn ? `<button class="btn btn-primary btn-sm" onclick="claimOpenShift('${r.id}')">Nhận ca này!</button>` : ''}
               ${isOwn ? `<span style="font-size:11.5px;color:var(--text3);font-weight:700">Đang chờ...</span>` : ''}
-              ${(isOwn || isAdmin()) ? `<button class="btn btn-sm" onclick="cancelSwap('${r.id}')">🚫 Hủy</button>` : ''}
+              ${(isOwn || isAdmin()) ? `<button class="btn btn-sm" onclick="cancelSwap('${r.id}')">Hủy</button>` : ''}
             </div>
           </div>
         </div>`;
@@ -4005,34 +4007,36 @@ function _showSwapTooltip(td) {
   // vì initCrosshair gọi _showSwapTooltip mỗi lần mouseover → xóa tooltip cũ ở đầu hàm
 }
 
+async function claimOpenShift(reqId) {
+  const req = (window._swapRequests || []).find(r => r.id === reqId);
+  if (!req || req.status !== 'pending') { 
+    showToast('Ca này đã có người nhận rồi!', 'warn'); return; 
+  }
+  const link = myStaffLink();
+  if (!link) { 
+    await dlgAlert('Tài khoản chưa liên kết KTV!', {icon:'⚠️', iconCls:'ic-warn'}); 
+    return; 
+  }
+  if (req.fromStaff === link) { 
+    await dlgAlert('Bạn không thể nhận ca của chính mình!', {icon:'⚠️', iconCls:'ic-warn'}); 
+    return; 
+  }
+  const ok = await dlgConfirm(
+    `Nhận ca từ <strong>${req.fromStaff}</strong>?<br>
+     <span style="font-size:12px;color:var(--text2)">${req.myShiftLabel}</span><br>
+     <span style="font-size:11.5px;color:var(--text3)">Ca sẽ chuyển sang tên bạn ngay lập tức.</span>`,
+    {title:'Nhận ca này', icon:'🙋', iconCls:'ic-info', okLabel:'✅ Nhận ca', okCls:'btn-primary'}
+  );
+  if (!ok) return;
 
+  // Cập nhật targetStaff rồi thực thi swap
+  req.targetStaff = link;
+  await window._updateSwapRequest(reqId, { targetStaff: link, isOpen: false });
+  await executeSwap(req);
+}
 
 </script>
-  <div class="modal-bg hidden" id="modalOpenShift">
-  <div class="modal" style="max-width:520px">
-    <div class="modal-title">📢 Nhường Ca Cho Tất Cả</div>
-    <div style="background:var(--gold-l);border:1.5px solid var(--gold-m);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--amber);font-weight:700">
-      ⚡ Ai nhấn <strong>"Nhận ca"</strong> trước sẽ được nhận ca đó. Hệ thống tự động chuyển lịch.
-    </div>
-    <div style="background:var(--blue-l);border:1.5px solid var(--blue-m);border-radius:10px;padding:14px 16px;margin-bottom:16px">
-      <div style="font-size:11px;font-weight:800;color:var(--blue);text-transform:uppercase;margin-bottom:10px">Chọn ca muốn nhường</div>
-      <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px">
-        <select id="osMyMonth" onchange="loadOsShifts()" style="height:34px;padding:0 8px;border:1.5px solid var(--border2);border-radius:var(--r);font-family:inherit;font-size:12px;font-weight:600;color:var(--text);background:var(--surface);outline:none"></select>
-        <input type="number" id="osMyYear" value="2026" min="2024" max="2030" onchange="loadOsShifts()" style="width:68px;height:34px;padding:0 8px;border:1.5px solid var(--border2);border-radius:var(--r);font-family:inherit;font-size:12px;font-weight:600;color:var(--text);background:var(--surface);outline:none">
-      </div>
-      <div id="osShiftBtns" style="display:flex;flex-wrap:wrap;gap:6px"></div>
-      <div id="osSelectedInfo" style="display:none;margin-top:10px;padding:8px 12px;background:var(--white);border:1.5px solid var(--blue);border-radius:8px;font-size:13px;font-weight:700;color:var(--blue)"></div>
-    </div>
-    <div class="modal-field">
-      <label>Lý do nhường ca (không bắt buộc)</label>
-      <textarea id="osReason" placeholder="VD: Bận việc gia đình..." style="min-height:50px"></textarea>
-    </div>
-    <div class="modal-actions">
-      <button class="btn" onclick="closeModal('modalOpenShift')">Hủy</button>
-      <button class="btn btn-primary" onclick="submitOpenShift()">📢 Đăng ca nhường</button>
-    </div>
-  </div>
-</div>
+ 
   <div class="modal-bg hidden" id="modalIcon">
   <div class="modal" style="max-width:460px">
     <div class="modal-title" id="modalIconTitle">Chọn icon cho KTV</div>
