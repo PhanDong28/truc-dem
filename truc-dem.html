@@ -3480,7 +3480,7 @@ function updateSwapBadge() {
   const badge = document.getElementById('swapBadge');
   if (!badge) return;
   const count = (window._swapRequests || []).filter(r =>
-    r.status === 'pending' && (r.targetStaff === link || isAdmin())
+    r.status === 'pending' && (r.targetStaff === link || r.isOpen || isAdmin()) 
   ).length;
   if (count > 0) { badge.style.display = 'inline'; badge.textContent = count; }
   else badge.style.display = 'none';
@@ -3656,7 +3656,7 @@ function openSwapModal() {
 
   // Điền danh sách KTV
   const sel = document.getElementById('swapTargetPerson');
-  sel.innerHTML = '<option value="">-- Chọn KTV --</option>' +
+  sel.innerHTML = '<option value="">📢 Nhường cho tất cả </option>' +
     window._staff.filter(n => !isStaffLocked(n) && n !== myName)
       .map(n => `<option value="${n}">${n}</option>`).join('');
 
@@ -3703,6 +3703,7 @@ async function submitSwapRequest() {
     myShiftType:  _swapMyDate.type,
     myShiftLabel: _swapMyDate.label,
     targetStaff:  target || null,
+    isOpen: !target,
     theirDate:    _swapTheirDate ? _swapTheirDate.date : null,
     theirShiftType: _swapTheirDate ? _swapTheirDate.type : null,
     theirShiftLabel: _swapTheirDate ? _swapTheirDate.label : null,
