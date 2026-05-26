@@ -3865,7 +3865,7 @@ function renderSwapPanel() {
     const isMine   = req.fromStaff === link;
     const isTarget = req.targetStaff === link;
     const borderCol = req.status==='pending'?'var(--gold)':req.status==='accepted'?'var(--green)':req.status==='rejected'?'var(--red)':'var(--border2)';
-    const canRespond = req.status === 'pending' && (isAdmin() || isTarget);
+    const canRespond = req.status === 'pending' && (isAdmin() || isTarget) && !isMine;
     const canCancel  = req.status === 'pending' && (isAdmin() || isMine);
 
     // Hiển thị label ca (dùng myShiftLabel nếu có, fallback sang cũ)
