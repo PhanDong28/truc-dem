@@ -3916,7 +3916,11 @@ function renderSwapPanel() {
     </div>`;
   }
 
-  const incoming = all.filter(r => r.status === 'pending' && (r.targetStaff === link || isAdmin()))
+  const incoming = all.filter(r => r.status === 'pending' && (
+    r.targetStaff === link || 
+    isAdmin() || 
+    (!r.targetStaff && r.fromStaff !== link)  // ← ca mở cho tất cả
+)
     .sort((a,b) => b.createdAt - a.createdAt);
   const outgoing = all.filter(r => r.status === 'pending' && r.fromStaff === link)
     .sort((a,b) => b.createdAt - a.createdAt);
@@ -3926,7 +3930,11 @@ function renderSwapPanel() {
     (now - (r.updatedAt || r.createdAt)) < 7 * 24 * 3600 * 1000
   ).sort((a,b) => b.updatedAt - a.updatedAt).slice(0, 15);
   // Open Shifts — hiển thị ở đầu
-  const openShifts = all.filter(r => r.isOpen && r.status === 'pending');
+  const openShifts = all.filter(r => 
+    r.status === 'pending' && 
+    (!r.targetStaff || r.isOpen) &&   // ← nhường cho tất cả
+    r.fromStaff !== link               // ← không hiện ca của chính mình ở đây
+);
   let openHtml = '';
   if (openShifts.length) {
     openHtml = `<div style="margin-bottom:16px">
