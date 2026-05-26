@@ -296,6 +296,14 @@ window._writeLog     = writeLog;
 window._fetchLogs    = fetchLogs;
 window._deleteLogDoc = deleteLogDoc;
 window._startRealtimeListeners = startRealtimeListeners;
+  window.showSyncStatus = (state) => {
+  const el = document.getElementById('syncStatus');
+  const lbl = document.getElementById('syncLabel');
+  if (!el || !lbl) return;
+  el.className = 'show ' + state;
+  const msgs = {checking:'Kiểm tra...', saving:'Đang lưu...', online:'Đã đồng bộ', error:'Lỗi kết nối!'};
+  lbl.textContent = msgs[state] || '';
+};
 window._bootstrapIfNeeded = bootstrapIfNeeded;
 window._loadAllFromFirebase = loadAllFromFirebase;
 
@@ -3672,11 +3680,6 @@ async function submitSwapRequest() {
 
   if (!link)        { await dlgAlert('Tài khoản chưa liên kết KTV!', { icon: '⚠️', iconCls: 'ic-warn' }); return; }
   if (!_swapMyDate) { await dlgAlert('Chọn ca của bạn muốn nhường!', { icon: '📅', iconCls: 'ic-warn' }); return; }
- const req = {
-    id:           'swap_' + Date.now(),
-    status:       'pending',
-      isOpen:       !target,
-
   // Kiểm tra trùng
   const dupCheck = (window._swapRequests || []).find(r =>
     r.status === 'pending' && r.fromStaff === link &&
