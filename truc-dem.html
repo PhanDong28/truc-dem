@@ -3879,7 +3879,7 @@ function renderSwapPanel() {
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">
         <div>
           <div style="font-size:13.5px;font-weight:900;color:var(--text);margin-bottom:2px">
-            🔄 ${req.fromStaff} → ${req.targetStaff}
+            🔄 ${req.fromStaff} → ${req.targetStaff || '📢 Tất cả'}
           </div>
           <div style="font-size:11px;color:var(--text3);font-weight:600">
   🕐 Đăng: ${fmtTime(req.createdAt)}${req.updatedAt !== req.createdAt ? ' · cập nhật ' + fmtTime(req.updatedAt) : ''}
@@ -3916,12 +3916,12 @@ function renderSwapPanel() {
     </div>`;
   }
 
-  const incoming = all.filter(r => r.status === 'pending' && (
+
+const incoming = all.filter(r => r.status === 'pending' && (
     r.targetStaff === link || 
     isAdmin() || 
-    (!r.targetStaff && r.fromStaff !== link)  // ← ca mở cho tất cả
-)
-    .sort((a,b) => b.createdAt - a.createdAt);
+    (!r.targetStaff && r.fromStaff !== link)
+)).sort((a,b) => b.createdAt - a.createdAt);
   const outgoing = all.filter(r => r.status === 'pending' && r.fromStaff === link)
     .sort((a,b) => b.createdAt - a.createdAt);
   const hist = all.filter(r =>
@@ -3982,14 +3982,7 @@ document.getElementById('swapIncoming').innerHTML = openHtml + (incoming.length
     : (!openShifts.length ? `<div style="padding:12px 16px;background:var(--green-l);border-radius:10px;font-size:13px;color:var(--green);font-weight:700;border:1px solid var(--green-m)">
         ✅ Không có yêu cầu nào đang chờ bạn
       </div>` : ''));
-  document.getElementById('swapIncoming').innerHTML = incoming.length
-    ? `<div style="font-size:14px;font-weight:900;color:var(--text);margin-bottom:10px">
-        📬 Chờ bạn xác nhận
-        <span style="background:var(--red);color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;font-weight:800;margin-left:6px">${incoming.length}</span>
-      </div>${incoming.map(makeCard).join('')}`
-    : `<div style="padding:12px 16px;background:var(--green-l);border-radius:10px;font-size:13px;color:var(--green);font-weight:700;border:1px solid var(--green-m)">
-        ✅ Không có yêu cầu nào đang chờ bạn
-      </div>`;
+
 
   document.getElementById('swapOutgoing').innerHTML = outgoing.length
     ? `<div style="font-size:14px;font-weight:900;color:var(--text);margin-bottom:10px;margin-top:16px">📤 Yêu cầu bạn đã gửi (đang chờ)</div>${outgoing.map(makeCard).join('')}`
