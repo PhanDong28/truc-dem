@@ -3908,10 +3908,10 @@ function renderSwapPanel() {
         💬 ${req.reason}</div>` : ''}
       <div style="display:flex;gap:7px;flex-wrap:wrap">
         ${canRespond ? `
-          <button class="btn btn-primary btn-sm" onclick="respondSwap('${req.id}',true)">✅ Đồng ý & Swap</button>
-          <button class="btn btn-red btn-sm" onclick="respondSwap('${req.id}',false)">❌ Từ chối</button>` : ''}
-        ${canCancel ? `<button class="btn btn-sm" onclick="cancelSwap('${req.id}')">🚫 Hủy</button>` : ''}
-        ${isAdmin() && req.status !== 'pending' ? `<button class="btn btn-sm" style="opacity:.5" onclick="deleteSwapReqAdmin('${req.id}')">🗑</button>` : ''}
+          <button class="btn btn-primary btn-sm respond-swap-btn" data-id="${req.id}" data-accept="true">✅ Đồng ý & Swap</button>
+          <button class="btn btn-red btn-sm respond-swap-btn" data-id="${req.id}" data-accept="false">❌ Từ chối</button>` : ''}
+        ${canCancel ? `<button class="btn btn-sm cancel-swap-btn" data-id="${req.id}">🚫 Hủy</button>` : ''}
+        ${isAdmin() && req.status !== 'pending' ? `class="btn btn-sm delete-swap-btn" data-id="${req.id}">🗑</button>` : ''}
       </div>
     </div>`;
   }
@@ -3953,14 +3953,27 @@ function renderSwapPanel() {
               ${r.reason ? `<div style="font-size:11.5px;color:var(--text3);margin-top:3px">💬 ${r.reason}</div>` : ''}
             </div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-              ${!isOwn ? `<button class="btn btn-primary btn-sm" onclick="claimOpenShift('${r.id}')">Nhận ca này!</button>` : ''}
+              ${!isOwn ? `<button class="btn btn-primary btn-sm claim-open-btn" data-id="${r.id}">Nhận ca này!</button>` : ''}
               ${isOwn ? `<span style="font-size:11.5px;color:var(--text3);font-weight:700">Đang chờ...</span>` : ''}
-              ${(isOwn || isAdmin()) ? `<button class="btn btn-sm" onclick="cancelSwap('${r.id}')">Hủy</button>` : ''}
+              ${(isOwn || isAdmin()) ? `<button class="btn btn-sm cancel-swap-btn" data-id="${r.id}">Hủy</button>` : ''}
             </div>
           </div>
         </div>`;
       }).join('') + '</div>';
   }
+  // Gán sự kiện cho các nút
+document.querySelectorAll('.claim-open-btn').forEach(btn => {
+    btn.onclick = () => claimOpenShift(btn.dataset.id);
+});
+document.querySelectorAll('.cancel-swap-btn').forEach(btn => {
+    btn.onclick = () => cancelSwap(btn.dataset.id);
+});
+document.querySelectorAll('.respond-swap-btn').forEach(btn => {
+    btn.onclick = () => respondSwap(btn.dataset.id, btn.dataset.accept === 'true');
+});
+document.querySelectorAll('.delete-swap-btn').forEach(btn => {
+    btn.onclick = () => deleteSwapReqAdmin(btn.dataset.id);
+});
 document.getElementById('swapIncoming').innerHTML = openHtml + (incoming.length
     ? `<div style="font-size:14px;font-weight:900;color:var(--text);margin-bottom:10px">
         📬 Chờ bạn xác nhận
