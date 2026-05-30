@@ -3465,6 +3465,26 @@ let _swapTheirDate = null; // { date, type, label }
 const MN_SHORT = ['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12'];
 
 function startSwapExpiryChecker() {
+  async function checkExpired() {
+    const expired = (window._swapRequests || []).filter(r =>
+      r.status === 'pending' &&
+      (Date.now() - r.createdAt) >= 24 * 60 * 60 * 1000
+    );
+    for (const r of expired) {
+      await window._updateSwapRequest(r.id, {
+        status: 'cancelled',
+        updatedAt: Date.now(),
+        cancelReason: 'auto_expired'
+      });
+    }
+    if (expired.length > 0) {
+      showToast(`Đã tự hủy ${expired.length} yêu cầu hết hạn`, 'info');
+    }
+  }
+
+  checkExpired(); // ← chạy ngay lúc init
+  setInterval(checkExpired, 5 * 60 * 1000); // ← sau đó mỗi 5 phút
+}
   setInterval(async () => {
     const expired = (window._swapRequests || []).filter(r =>
       r.status === 'pending' &&
@@ -3502,7 +3522,24 @@ function updateSwapBadge() {
   if (count > 0) { badge.style.display = 'inline'; badge.textContent = count; }
   else badge.style.display = 'none';
 }
-
+function canSwapMonth(m, y) {
+  if (isAdmin()) return true;
+  const now = new Date();
+  const todayY = now.getFullYear(), todayM = now.getMonth()+1, todayD = now.getDate();
+  // Tháng hiện tại: luôn cho phép
+  if (y === todayY && m === todayM) return true;
+  // Tháng trước: không cho phép
+  if (y < todayY || (y === todayY && m < todayM)) return false;
+  // Tháng sau: chỉ cho phép nếu còn <= 7 ngày trong tháng hiện tại
+  const nextM = todayM === 12 ? 1 : todayM + 1;
+  const nextY = todayM === 12 ? todayY + 1 : todayY;
+  if (y === nextY && m === nextM) {
+    const daysInCurMonth = new Date(todayY, todayM, 0).getDate();
+    return todayD >= daysInCurMonth - 6; // 7 ngày cuối tháng
+  }
+  // Xa hơn: không cho phép
+  return false;
+}
 // Lấy tất cả ca của một người trong tháng/năm — bao gồm cả ca ngày CN
 function getShiftsOfPerson(name, m, y) {
   const days = daysIn(y, m);
@@ -3585,14 +3622,22 @@ function loadMyShifts() {
   if (!link) return;
   const m = parseInt(document.getElementById('swapMyMonth').value);
   const y = parseInt(document.getElementById('swapMyYear').value);
+
+  if (!canSwapMonth(m, y)) {
+    document.getElementById('myShiftList').innerHTML =
+      `<div style="padding:8px 12px;background:#fef2f2;border-radius:8px;font-size:12.5px;font-weight:700;color:#dc2626">
+        🔒 Chưa được phép đổi ca tháng ${m}/${y}.<br>
+        <span style="font-weight:600;color:var(--text3)">Tháng sau chỉ mở đăng ký trong 7 ngày cuối tháng này.</span>
+      </div>`;
+    return;
+  }
+
   const shifts = getShiftsOfPerson(link, m, y);
   renderShiftBtns(shifts, _swapMyDate, 'myShiftList', 'selectMyShift');
-  // Reset selection nếu tháng thay đổi
   if (_swapMyDate && !_swapMyDate.date.startsWith(`${y}-${String(m).padStart(2,'0')}`)) {
     _swapMyDate = null;
     document.getElementById('swapMyDateHidden').style.display = 'none';
   }
-  updateSwapPreviewModal();
 }
 
 function loadTheirShifts() {
@@ -3651,9 +3696,16 @@ function openSwapModal() {
   // Điền tháng/năm hiện tại
   const now = new Date();
   const selM = document.getElementById('swapMyMonth');
-  selM.innerHTML = MN_SHORT.map((mn, i) =>
-    `<option value="${i+1}" ${i+1 === now.getMonth()+1 ? 'selected' : ''}>${mn}/${now.getFullYear()}</option>`
-  ).join('');
+// Chỉ hiện tháng hiện tại và tháng sau (nếu đủ điều kiện)
+const todayM2 = now.getMonth()+1, todayY2 = now.getFullYear();
+const nextM2 = todayM2 === 12 ? 1 : todayM2 + 1;
+const nextY2 = todayM2 === 12 ? todayY2 + 1 : todayY2;
+const months = [`<option value="${todayM2}" selected>${MN_SHORT[todayM2-1]}/${todayY2}</option>`];
+if (canSwapMonth(nextM2, nextY2)) {
+  months.push(`<option value="${nextM2}">${MN_SHORT[nextM2-1]}/${nextY2}</option>`);
+}
+selM.innerHTML = months.join('');
+document.getElementById('swapMyYear').value = todayY2;
   document.getElementById('swapMyYear').value = now.getFullYear();
 
   // Điền danh sách KTV
@@ -3934,11 +3986,11 @@ ${(() => {
   }
 
 
-const incoming = all.filter(r => r.status === 'pending' && (
-    r.targetStaff === link || 
-    isAdmin() || 
-    (!r.targetStaff && r.fromStaff !== link)
-)).sort((a,b) => b.createdAt - a.createdAt);
+const incoming = all.filter(r => r.status === 'pending' && 
+    !r.isOpen &&
+    !(!r.targetStaff) &&
+    (r.targetStaff === link || isAdmin())
+).sort((a,b) => b.createdAt - a.createdAt);
   const outgoing = all.filter(r => r.status === 'pending' && r.fromStaff === link)
     .sort((a,b) => b.createdAt - a.createdAt);
   const hist = all.filter(r =>
@@ -3970,7 +4022,12 @@ const incoming = all.filter(r => r.status === 'pending' && (
               ${r.reason ? `<div style="font-size:11.5px;color:var(--text3);margin-top:3px">💬 ${r.reason}</div>` : ''}
             </div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-              ${!isOwn ? `<button class="btn btn-primary btn-sm claim-open-btn" data-id="${r.id}">Nhận ca này!</button>` : ''}
+              ${(() => {
+  if (isOwn) return '';
+  const exp = getSwapExpiry(r);
+  if (exp && exp.expired) return `<span style="font-size:11.5px;color:#dc2626;font-weight:700">⌛ Hết hạn</span>`;
+  return `<button class="btn btn-primary btn-sm claim-open-btn" data-id="${r.id}">Nhận ca này!</button>`;
+})()}
               ${isOwn ? `<span style="font-size:11.5px;color:var(--text3);font-weight:700">Đang chờ...</span>` : ''}
               ${(isOwn || isAdmin()) ? `<button class="btn btn-sm cancel-swap-btn" data-id="${r.id}">Hủy</button>` : ''}
             </div>
