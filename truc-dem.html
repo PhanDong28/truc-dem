@@ -643,6 +643,33 @@ table.st tfoot td{background:var(--blue-l);font-weight:800;color:var(--blue);bor
 .btn-amber{background:#fffbeb;border-color:#fcd34d;color:#92400e}
 .btn-amber:hover{background:#fcd34d;color:#78350f}
 .swap-tooltip { animation: fadeIn .15s; }
+  /* ── SWAP PANEL ── */
+.swap-section-title{font-size:13px;font-weight:900;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.swap-section-title .cnt-badge{background:var(--red);color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;font-weight:800}
+.swap-section-title .cnt-badge.gold{background:var(--gold)}
+.swap-card{background:var(--white);border:1.5px solid var(--border);border-left-width:4px;border-radius:12px;padding:14px 18px;margin-bottom:10px;transition:box-shadow .15s}
+.swap-card:hover{box-shadow:var(--sh-lg)}
+.swap-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.swap-card-title{font-size:13.5px;font-weight:900;color:var(--text);margin-bottom:3px}
+.swap-card-meta{font-size:11px;color:var(--text3);font-weight:600;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.swap-expiry{display:inline-block;padding:2px 9px;border-radius:6px;font-size:11px;font-weight:800}
+.swap-shift-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.swap-shift-box{border-radius:8px;padding:10px 12px}
+.swap-shift-box-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px}
+.swap-shift-name{font-size:12.5px;font-weight:700;color:var(--text)}
+.swap-shift-date{font-size:11.5px;color:var(--text3);margin-top:2px}
+.swap-reason{background:var(--surface);border-radius:6px;padding:7px 10px;font-size:12px;color:var(--text2);margin-bottom:10px;border-left:3px solid var(--border2)}
+.swap-actions{display:flex;gap:7px;flex-wrap:wrap}
+.swap-status{display:inline-block;padding:3px 11px;border-radius:12px;font-size:11.5px;font-weight:800}
+.swap-open-card{background:var(--white);border:1.5px solid var(--gold-m);border-left:4px solid var(--gold);border-radius:12px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;transition:box-shadow .15s}
+.swap-open-card:hover{box-shadow:0 4px 16px rgba(244,163,29,0.2)}
+.swap-open-info{flex:1;min-width:0}
+.swap-open-name{font-size:13px;font-weight:900;color:var(--text);margin-bottom:3px}
+.swap-open-shift{font-size:12px;color:var(--text2);margin-bottom:3px}
+.swap-open-reason{font-size:11.5px;color:var(--text3)}
+.swap-open-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center;flex-shrink:0}
+.swap-empty{padding:12px 16px;background:var(--green-l);border-radius:10px;font-size:13px;color:var(--green);font-weight:700;border:1px solid var(--green-m);display:flex;align-items:center;gap:8px}
+.swap-hist-sep{padding-top:16px;border-top:1px solid var(--border);margin-bottom:10px}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:#c0cfe0;border-radius:3px}
@@ -3700,7 +3727,7 @@ document.getElementById('swapMyYear').value = todayY2;
 
   document.getElementById('swapMyDateHidden').style.display = 'none';
   document.getElementById('swapTheirDateHidden').style.display = 'none';
-  document.getElementById('swapModalPreview').style.display = 'none';
+
   document.getElementById('swapReason').value = '';
 
   // Load ca ngay
@@ -3881,17 +3908,15 @@ function renderSwapPanel() {
   const link = myStaffLink();
   const all  = (window._swapRequests || []);
   const now  = Date.now();
-  const DOW_VN = ['CN','T2','T3','T4','T5','T6','T7'];
 
   function fmtDate(ds) {
     if (!ds) return '—';
     const [y, m, d] = ds.split('-').map(Number);
-    return `${DOW_VN[dowOf(y,m,d)]}, ${String(d).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y}`;
+    return `${['CN','T2','T3','T4','T5','T6','T7'][dowOf(y,m,d)]}, ${String(d).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y}`;
   }
   function fmtTime(ts) {
     const dt = new Date(ts);
-    return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')} `
-         + `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+    return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
   }
   function statusBadge(s) {
     const map = {
@@ -3901,157 +3926,136 @@ function renderSwapPanel() {
       cancelled: ['🚫 Đã hủy', '#f7f9fd', '#8ea5c0'],
     };
     const [lbl, bg, col] = map[s] || ['?','#fff','#000'];
-    return `<span style="display:inline-block;padding:3px 11px;border-radius:12px;
-      font-size:11.5px;font-weight:800;background:${bg};color:${col}">${lbl}</span>`;
+    return `<span class="swap-status" style="background:${bg};color:${col}">${lbl}</span>`;
+  }
+  function expiryBadge(req) {
+    const exp = getSwapExpiry(req);
+    if (!exp) return '';
+    if (exp.expired) return `<span class="swap-expiry" style="background:#fef2f2;color:#dc2626">⌛ Đã hết hạn</span>`;
+    const h  = Math.floor(exp.remain / 3600000);
+    const mn = Math.floor((exp.remain % 3600000) / 60000);
+    const col = exp.remain < 3600000 ? '#dc2626' : exp.remain < 7200000 ? '#d97706' : '#16a34a';
+    const bg  = exp.remain < 3600000 ? '#fef2f2' : exp.remain < 7200000 ? '#fffbeb' : '#f0fdf4';
+    return `<span class="swap-expiry" style="background:${bg};color:${col}">⏱ Còn ${h}h ${mn}p</span>`;
   }
 
   function makeCard(req) {
     const isMine   = req.fromStaff === link;
     const isTarget = req.targetStaff === link;
-    const borderCol = req.status==='pending'?'var(--gold)':req.status==='accepted'?'var(--green)':req.status==='rejected'?'var(--red)':'var(--border2)';
+    const borderMap = {pending:'var(--gold)',accepted:'var(--green)',rejected:'var(--red)',cancelled:'var(--border2)'};
+    const borderCol = borderMap[req.status] || 'var(--border2)';
     const canRespond = req.status === 'pending' && (isAdmin() || isTarget) && !isMine;
     const canCancel  = req.status === 'pending' && (isAdmin() || isMine);
-
-    // Hiển thị label ca (dùng myShiftLabel nếu có, fallback sang cũ)
-    const myLabel = req.myShiftLabel || (req.myDayCN ? '☀️ Ca ngày CN' : req.myShift ? `🌙 Ca tối (${req.myShift})` : '?');
+    const myLabel    = req.myShiftLabel  || (req.myDayCN  ? '☀️ Ca ngày CN' : req.myShift  ? `🌙 Ca tối (${req.myShift})`  : '?');
     const theirLabel = req.theirShiftLabel || (req.theirDayCN ? '☀️ Ca ngày CN' : req.theirShift ? `🌙 Ca tối (${req.theirShift})` : null);
 
-    return `<div style="background:var(--white);border:1.5px solid var(--border);
-      border-left:4px solid ${borderCol};border-radius:12px;
-      padding:14px 18px;margin-bottom:10px">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+    return `<div class="swap-card" style="border-left-color:${borderCol}">
+      <div class="swap-card-head">
         <div>
-          <div style="font-size:13.5px;font-weight:900;color:var(--text);margin-bottom:2px">
-            🔄 ${req.fromStaff} → ${req.targetStaff || '📢 Tất cả'}
+          <div class="swap-card-title">🔄 ${req.fromStaff} → ${req.targetStaff || '📢 Tất cả'}</div>
+          <div class="swap-card-meta">
+            <span>🕐 ${fmtTime(req.createdAt)}</span>
+            ${req.updatedAt !== req.createdAt ? `<span>· cập nhật ${fmtTime(req.updatedAt)}</span>` : ''}
+            ${expiryBadge(req)}
           </div>
-<div style="font-size:11px;color:var(--text3);font-weight:600">
-  🕐 Đăng: ${fmtTime(req.createdAt)}${req.updatedAt !== req.createdAt ? ' · cập nhật ' + fmtTime(req.updatedAt) : ''}
-</div>
-${(() => {
-  const exp = getSwapExpiry(req);
-  if (!exp) return '';
-  if (exp.expired) return `<span style="display:inline-block;margin-top:4px;padding:2px 9px;background:#fef2f2;border-radius:6px;font-size:11px;font-weight:800;color:#dc2626">⌛ Đã hết hạn – sẽ tự hủy</span>`;
-  const h  = Math.floor(exp.remain / 3600000);
-  const mn = Math.floor((exp.remain % 3600000) / 60000);
-  const col = exp.remain < 3600000 ? '#dc2626' : exp.remain < 7200000 ? '#d97706' : '#16a34a';
-  const bg  = exp.remain < 3600000 ? '#fef2f2' : exp.remain < 7200000 ? '#fffbeb' : '#f0fdf4';
-  return `<span style="display:inline-block;margin-top:4px;padding:2px 9px;background:${bg};border-radius:6px;font-size:11px;font-weight:800;color:${col}">⏱ Còn ${h}h ${mn}p</span>`;
-})()}
         </div>
         ${statusBadge(req.status)}
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-        <div style="background:var(--blue-l);border-radius:8px;padding:10px 12px">
-          <div style="font-size:10px;font-weight:800;color:var(--blue);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">📤 ${req.fromStaff} nhường</div>
-          <div style="font-size:12.5px;font-weight:700;color:var(--text)">${myLabel}</div>
-          <div style="font-size:11.5px;color:var(--text3);margin-top:2px">📅 ${fmtDate(req.myDate)}</div>
+      <div class="swap-shift-grid">
+        <div class="swap-shift-box" style="background:var(--blue-l)">
+          <div class="swap-shift-box-label" style="color:var(--blue)">📤 ${req.fromStaff} nhường</div>
+          <div class="swap-shift-name">${myLabel}</div>
+          <div class="swap-shift-date">📅 ${fmtDate(req.myDate)}</div>
         </div>
-        ${theirLabel ? `
-        <div style="background:var(--green-l);border-radius:8px;padding:10px 12px">
-          <div style="font-size:10px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">📥 ${req.targetStaff} đổi lại</div>
-          <div style="font-size:12.5px;font-weight:700;color:var(--text)">${theirLabel}</div>
-          <div style="font-size:11.5px;color:var(--text3);margin-top:2px">📅 ${fmtDate(req.theirDate)}</div>
-        </div>` : `
-        <div style="background:var(--surface);border-radius:8px;padding:10px 12px;border:1.5px dashed var(--border2)">
-          <div style="font-size:12px;color:var(--text3)">${req.isOpen ? '📢 Mở cho tất cả — ai nhận trước được' : req.targetStaff + ' trực thay, không cần đổi lại'}</div>
-          <div style="font-size:12px;color:var(--text3)">${req.targetStaff} trực thay, không cần đổi lại</div>
-        </div>`}
+        ${theirLabel
+          ? `<div class="swap-shift-box" style="background:var(--green-l)">
+               <div class="swap-shift-box-label" style="color:var(--green)">📥 ${req.targetStaff} đổi lại</div>
+               <div class="swap-shift-name">${theirLabel}</div>
+               <div class="swap-shift-date">📅 ${fmtDate(req.theirDate)}</div>
+             </div>`
+          : `<div class="swap-shift-box" style="background:var(--surface);border:1.5px dashed var(--border2)">
+               <div style="font-size:12px;color:var(--text3);line-height:1.6">
+                 ${req.isOpen ? '📢 Ai nhận trước được' : `${req.targetStaff || '?'} trực thay, không đổi lại`}
+               </div>
+             </div>`
+        }
       </div>
-      ${req.reason ? `<div style="background:var(--surface);border-radius:6px;padding:7px 10px;font-size:12px;color:var(--text2);margin-bottom:10px">
-        💬 ${req.reason}</div>` : ''}
-      <div style="display:flex;gap:7px;flex-wrap:wrap">
+      ${req.reason ? `<div class="swap-reason">💬 ${req.reason}</div>` : ''}
+      <div class="swap-actions">
         ${canRespond ? `
           <button class="btn btn-primary btn-sm respond-swap-btn" data-id="${req.id}" data-accept="true">✅ Đồng ý & Swap</button>
           <button class="btn btn-red btn-sm respond-swap-btn" data-id="${req.id}" data-accept="false">❌ Từ chối</button>` : ''}
-        ${canCancel ? `<button class="btn btn-sm cancel-swap-btn" data-id="${req.id}">🚫 Hủy</button>` : ''}
-        ${isAdmin() && req.status !== 'pending' ? `<button class="btn btn-sm delete-swap-btn" data-id="${req.id}">🗑</button>` : ''}
+        ${canCancel  ? `<button class="btn btn-sm cancel-swap-btn" data-id="${req.id}">🚫 Hủy</button>` : ''}
+        ${isAdmin() && req.status !== 'pending' ? `<button class="btn btn-sm btn-red delete-swap-btn" data-id="${req.id}">🗑</button>` : ''}
       </div>
     </div>`;
   }
 
+  const openShifts = all.filter(r => r.status === 'pending' && (!r.targetStaff || r.isOpen) && r.fromStaff !== link);
+  const incoming   = all.filter(r => r.status === 'pending' && !r.isOpen && r.targetStaff && (r.targetStaff === link || isAdmin())).sort((a,b)=>b.createdAt-a.createdAt);
+  const outgoing   = all.filter(r => r.status === 'pending' && r.fromStaff === link).sort((a,b)=>b.createdAt-a.createdAt);
+  const hist       = all.filter(r => r.status !== 'pending' && (isAdmin() || r.fromStaff === link || r.targetStaff === link) && (now-(r.updatedAt||r.createdAt)) < 7*24*3600*1000).sort((a,b)=>b.updatedAt-a.updatedAt).slice(0,15);
 
-const incoming = all.filter(r => r.status === 'pending' && 
-    !r.isOpen &&
-    !(!r.targetStaff) &&
-    (r.targetStaff === link || isAdmin())
-).sort((a,b) => b.createdAt - a.createdAt);
-  const outgoing = all.filter(r => r.status === 'pending' && r.fromStaff === link)
-    .sort((a,b) => b.createdAt - a.createdAt);
-  const hist = all.filter(r =>
-    r.status !== 'pending' &&
-    (isAdmin() || r.fromStaff === link || r.targetStaff === link) &&
-    (now - (r.updatedAt || r.createdAt)) < 7 * 24 * 3600 * 1000
-  ).sort((a,b) => b.updatedAt - a.updatedAt).slice(0, 15);
-  // Open Shifts — hiển thị ở đầu
-  const openShifts = all.filter(r => 
-    r.status === 'pending' && 
-    (!r.targetStaff || r.isOpen) &&   // ← nhường cho tất cả
-    r.fromStaff !== link               // ← không hiện ca của chính mình ở đây
-);
+  // ── CA CẦN NGƯỜI NHẬN ──
   let openHtml = '';
   if (openShifts.length) {
-    openHtml = `<div style="margin-bottom:16px">
-      <div style="font-size:14px;font-weight:900;color:var(--amber);margin-bottom:10px">
-        📢 Ca cần người nhận
-        <span style="background:var(--gold);color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;margin-left:6px">${openShifts.length}</span>
-      </div>` +
+    openHtml = `<div style="margin-bottom:18px">
+      <div class="swap-section-title">📢 Ca cần người nhận <span class="cnt-badge gold">${openShifts.length}</span></div>` +
       openShifts.map(r => {
-        const isOwn = r.fromStaff === link;
-        const c = shiftTypeColor(r.myShiftType || 'toi');
-        return `<div style="background:var(--white);border:1.5px solid var(--gold-m);border-left:4px solid var(--gold);border-radius:12px;padding:12px 16px;margin-bottom:8px">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap">
-            <div>
-              <div style="font-size:13px;font-weight:900;color:var(--text)"> ${r.fromStaff} nhường ca</div>
-              <div style="font-size:12px;color:var(--text2);margin-top:3px">${r.myShiftLabel} — ${fmtDate(r.myDate)}</div>
-              ${r.reason ? `<div style="font-size:11.5px;color:var(--text3);margin-top:3px">💬 ${r.reason}</div>` : ''}
-            </div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-              ${(() => {
-  if (isOwn) return '';
-  const exp = getSwapExpiry(r);
-  if (exp && exp.expired) return `<span style="font-size:11.5px;color:#dc2626;font-weight:700">⌛ Hết hạn</span>`;
-  return `<button class="btn btn-primary btn-sm claim-open-btn" data-id="${r.id}">Nhận ca này!</button>`;
-})()}
-              ${isOwn ? `<span style="font-size:11.5px;color:var(--text3);font-weight:700">Đang chờ...</span>` : ''}
-              ${(isOwn || isAdmin()) ? `<button class="btn btn-sm cancel-swap-btn" data-id="${r.id}">Hủy</button>` : ''}
-            </div>
+        const exp = getSwapExpiry(r);
+        const expired = exp && exp.expired;
+        return `<div class="swap-open-card">
+          <div class="swap-open-info">
+            <div class="swap-open-name">${r.fromStaff} nhường ca</div>
+            <div class="swap-open-shift">${r.myShiftLabel || '?'} &nbsp;·&nbsp; 📅 ${fmtDate(r.myDate)}</div>
+            ${r.reason ? `<div class="swap-open-reason">💬 ${r.reason}</div>` : ''}
+          </div>
+          <div class="swap-open-actions">
+            ${expired
+              ? `<span style="font-size:11.5px;color:#dc2626;font-weight:700">⌛ Hết hạn</span>`
+              : `<button class="btn btn-primary btn-sm claim-open-btn" data-id="${r.id}">🙋 Nhận ca!</button>`
+            }
+            ${(r.fromStaff === link || isAdmin()) ? `<button class="btn btn-sm cancel-swap-btn" data-id="${r.id}">Hủy</button>` : ''}
           </div>
         </div>`;
       }).join('') + '</div>';
   }
-document.getElementById('swapIncoming').innerHTML = openHtml + (incoming.length
-    ? `<div style="font-size:14px;font-weight:900;color:var(--text);margin-bottom:10px">
-        📬 Chờ bạn xác nhận
-        <span style="background:var(--red);color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;font-weight:800;margin-left:6px">${incoming.length}</span>
-      </div>${incoming.map(makeCard).join('')}`
-    : (!openShifts.length ? `<div style="padding:12px 16px;background:var(--green-l);border-radius:10px;font-size:13px;color:var(--green);font-weight:700;border:1px solid var(--green-m)">
-        ✅ Không có yêu cầu nào đang chờ bạn
-      </div>` : ''));
 
+  // ── CHỜ XÁC NHẬN ──
+  const incomingHtml = incoming.length
+    ? `<div style="margin-bottom:18px">
+        <div class="swap-section-title">📬 Chờ bạn xác nhận <span class="cnt-badge">${incoming.length}</span></div>
+        ${incoming.map(makeCard).join('')}
+      </div>`
+    : (!openShifts.length
+        ? `<div class="swap-empty">✅ Không có yêu cầu nào đang chờ bạn</div>`
+        : '');
 
-  document.getElementById('swapOutgoing').innerHTML = outgoing.length
-    ? `<div style="font-size:14px;font-weight:900;color:var(--text);margin-bottom:10px;margin-top:16px">📤 Yêu cầu bạn đã gửi (đang chờ)</div>${outgoing.map(makeCard).join('')}`
+  // ── YÊU CẦU ĐÃ GỬI ──
+  const outgoingHtml = outgoing.length
+    ? `<div style="margin-bottom:18px;margin-top:4px">
+        <div class="swap-section-title">📤 Yêu cầu bạn đã gửi</div>
+        ${outgoing.map(makeCard).join('')}
+      </div>`
     : '';
 
-  document.getElementById('swapHistory').innerHTML = hist.length
-    ? `<div style="font-size:14px;font-weight:900;color:var(--text);margin-bottom:10px;padding-top:16px;border-top:1px solid var(--border)">
-        📋 Lịch sử 7 ngày gần nhất</div>${hist.map(makeCard).join('')}`
+  // ── LỊCH SỬ ──
+  const histHtml = hist.length
+    ? `<div class="swap-hist-sep">
+        <div class="swap-section-title">📋 Lịch sử 7 ngày gần nhất</div>
+        ${hist.map(makeCard).join('')}
+      </div>`
     : '';
 
-  // ← THÊM VÀO ĐÂY (trước dấu } đóng hàm)
-  document.getElementById('tSwap').querySelectorAll('.claim-open-btn').forEach(btn => {
-    btn.onclick = () => claimOpenShift(btn.dataset.id);
-  });
-  document.getElementById('tSwap').querySelectorAll('.cancel-swap-btn').forEach(btn => {
-    btn.onclick = () => cancelSwap(btn.dataset.id);
-  });
-  document.getElementById('tSwap').querySelectorAll('.respond-swap-btn').forEach(btn => {
-    btn.onclick = () => respondSwap(btn.dataset.id, btn.dataset.accept === 'true');
-  });
-  document.getElementById('tSwap').querySelectorAll('.delete-swap-btn').forEach(btn => {
-    btn.onclick = () => deleteSwapReqAdmin(btn.dataset.id);
-  });
+  document.getElementById('swapIncoming').innerHTML = openHtml + incomingHtml;
+  document.getElementById('swapOutgoing').innerHTML = outgoingHtml;
+  document.getElementById('swapHistory').innerHTML  = histHtml;
 
+  // Gắn sự kiện
+  document.getElementById('tSwap').querySelectorAll('.claim-open-btn').forEach(btn => { btn.onclick = () => claimOpenShift(btn.dataset.id); });
+  document.getElementById('tSwap').querySelectorAll('.cancel-swap-btn').forEach(btn => { btn.onclick = () => cancelSwap(btn.dataset.id); });
+  document.getElementById('tSwap').querySelectorAll('.respond-swap-btn').forEach(btn => { btn.onclick = () => respondSwap(btn.dataset.id, btn.dataset.accept === 'true'); });
+  document.getElementById('tSwap').querySelectorAll('.delete-swap-btn').forEach(btn => { btn.onclick = () => deleteSwapReqAdmin(btn.dataset.id); });
 }
 function _showSwapTooltip(td) {
   const d = parseInt(td.dataset.d || '0');
