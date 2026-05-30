@@ -653,7 +653,10 @@ table.st tfoot td{background:var(--blue-l);font-weight:800;color:var(--blue);bor
 .swap-card-title{font-size:13.5px;font-weight:900;color:var(--text);margin-bottom:3px}
 .swap-card-meta{font-size:11px;color:var(--text3);font-weight:600;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .swap-expiry{display:inline-block;padding:2px 9px;border-radius:6px;font-size:11px;font-weight:800}
-.swap-shift-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.swap-shift-grid { gap: 6px; margin-bottom: 8px; }
+.swap-card { padding: 12px 14px; margin-bottom: 8px; }
+.swap-card-title { font-size: 13px; }
+.swap-open-card { padding: 10px 14px; }
 .swap-shift-box{border-radius:8px;padding:10px 12px}
 .swap-shift-box-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px}
 .swap-shift-name{font-size:12.5px;font-weight:700;color:var(--text)}
@@ -1609,6 +1612,22 @@ function initApp(){
       updateSwapBadge();
     });
   }
+  // Kiểm tra swap mới sau khi load xong
+setTimeout(() => {
+  const link2 = myStaffLink();
+  if (!link2) return;
+  const pending = (window._swapRequests || []).filter(r =>
+    r.status === 'pending' && r.targetStaff === link2 && !r.isOpen
+  );
+  if (pending.length > 0) {
+    const names = pending.map(r => `• ${r.fromStaff}: ${r.myShiftLabel || r.myDate}`).join('\n');
+    dlgAlert(
+      `Bạn có <strong>${pending.length}</strong> yêu cầu đổi ca đang chờ xác nhận:<br><br>` +
+      pending.map(r => `• <strong>${r.fromStaff}</strong>: ${r.myShiftLabel || r.myDate}`).join('<br>'),
+      { title: '🔔 Thông báo đổi ca', icon: '🔄', iconCls: 'ic-info' }
+    );
+  }
+}, 1500); // Đợi 1.5s để Firebase load xong
 }
 
 // ============================================================
@@ -1709,6 +1728,7 @@ function calcP(n, m, y, std){
 // TAB SWITCH
 // ============================================================
 function switchTab(id, btn){
+  document.querySelectorAll('.swap-tooltip').forEach(el => el.remove()); 
   if(id==='t0') { 
     document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
     document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
@@ -2901,6 +2921,8 @@ function clearCrosshair() {
   wrap.querySelectorAll('tr.row-hover').forEach(r => r.classList.remove('row-hover'));
   wrap.querySelectorAll('.col-hover').forEach(c => c.classList.remove('col-hover'));
   wrap.querySelectorAll('.cell-active').forEach(c => c.classList.remove('cell-active'));
+  // XÓA TOOLTIP
+  document.querySelectorAll('.swap-tooltip').forEach(el => el.remove());
 }
   function stepMonth(delta) {
   let m = gM() + delta, y = gY();
@@ -3944,7 +3966,7 @@ function renderSwapPanel() {
     const isTarget = req.targetStaff === link;
     const borderMap = {pending:'var(--gold)',accepted:'var(--green)',rejected:'var(--red)',cancelled:'var(--border2)'};
     const borderCol = borderMap[req.status] || 'var(--border2)';
-    const canRespond = req.status === 'pending' && (isAdmin() || isTarget) && !isMine;
+    const canRespond = req.status === 'pending' && isTarget && !isMine;
     const canCancel  = req.status === 'pending' && (isAdmin() || isMine);
     const myLabel    = req.myShiftLabel  || (req.myDayCN  ? '☀️ Ca ngày CN' : req.myShift  ? `🌙 Ca tối (${req.myShift})`  : '?');
     const theirLabel = req.theirShiftLabel || (req.theirDayCN ? '☀️ Ca ngày CN' : req.theirShift ? `🌙 Ca tối (${req.theirShift})` : null);
@@ -4015,7 +4037,7 @@ function renderSwapPanel() {
               ? `<span style="font-size:11.5px;color:#dc2626;font-weight:700">⌛ Hết hạn</span>`
               : `<button class="btn btn-primary btn-sm claim-open-btn" data-id="${r.id}">🙋 Nhận ca!</button>`
             }
-            ${(r.fromStaff === link || isAdmin()) ? `<button class="btn btn-sm cancel-swap-btn" data-id="${r.id}">Hủy</button>` : ''}
+            ${(r.fromStaff === link) ? `<button class="btn btn-sm cancel-swap-btn" data-id="${r.id}">Hủy</button>` : ''}
           </div>
         </div>`;
       }).join('') + '</div>';
