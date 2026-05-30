@@ -3482,26 +3482,10 @@ function startSwapExpiryChecker() {
     }
   }
 
-  checkExpired(); // ← chạy ngay lúc init
-  setInterval(checkExpired, 5 * 60 * 1000); // ← sau đó mỗi 5 phút
+  checkExpired();
+  setInterval(checkExpired, 5 * 60 * 1000);
 }
-  setInterval(async () => {
-    const expired = (window._swapRequests || []).filter(r =>
-      r.status === 'pending' &&
-      (Date.now() - r.createdAt) >= 24 * 60 * 60 * 1000
-    );
-    for (const r of expired) {
-      await window._updateSwapRequest(r.id, {
-        status: 'cancelled',
-        updatedAt: Date.now(),
-        cancelReason: 'auto_expired'
-      });
-    }
-    if (expired.length > 0) {
-      showToast(`Đã tự hủy ${expired.length} yêu cầu hết hạn`, 'info');
-    }
-  }, 5 * 60 * 1000); // chạy mỗi 5 phút
-}
+    
 function initSwapListener() {
   window._onSwapUpdate = function(reqs) {
     window._swapRequests = reqs || [];
