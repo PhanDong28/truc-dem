@@ -322,21 +322,27 @@ window.addEventListener('DOMContentLoaded', async () => {
   --blue:#2a5aa4; --blue-d:#1e4282; --blue-dd:#152f60;
   --blue-l:#eef3fb; --blue-m:#b8cef0;
   --gold:#f4a31d; --gold-d:#d4880d; --gold-l:#fef7e8; --gold-m:#fad27a;
-  --bg:#f0f4fb; --white:#fff; --surface:#f7f9fd;
-  --border:#d5dff0; --border2:#b0c4e0;
-  --text:#1a2d4a; --text2:#4a6080; --text3:#8ea5c0;
+  --bg:#eef2fa; --white:#fff; --surface:#f7f9fd;
+  --border:#dbe4f3; --border2:#aec1de;
+  --text:#182644; --text2:#44597c; --text3:#647a9c;
   --green:#16a34a; --green-l:#f0fdf4; --green-m:#86efac;
   --amber:#d97706; --amber-l:#fffbeb; --amber-m:#fcd34d;
   --teal:#0d9488; --teal-l:#ccfbf1;
   --red:#dc2626; --red-l:#fef2f2;
   --purple:#7c3aed; --purple-l:#f5f3ff; --purple-m:#c4b5fd;
   --rose:#e11d48; --rose-l:#fff1f2;
-  --r:8px; --r-lg:14px;
-  --sh:0 2px 12px rgba(42,90,164,0.10);
-  --sh-lg:0 4px 24px rgba(42,90,164,0.14);
+  --r-sm:6px; --r:9px; --r-lg:14px; --r-xl:20px;
+  --sh:0 2px 10px rgba(24,38,68,0.07);
+  --sh-lg:0 10px 32px rgba(24,38,68,0.14);
+  --focus-ring:0 0 0 3px rgba(244,163,29,0.45);
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Be Vietnam Pro',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+html{scroll-behavior:smooth}
+body{font-family:'Be Vietnam Pro',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+::selection{background:var(--gold-m);color:var(--blue-dd)}
+button,input,select,textarea{font-family:inherit}
+:focus-visible{outline:2.5px solid var(--gold);outline-offset:2px;border-radius:4px}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}
 
 #loadingOverlay{position:fixed;inset:0;background:linear-gradient(145deg,var(--blue-dd) 0%,var(--blue) 55%,#1a6e7a 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;transition:opacity .5s}
 #loadingOverlay.hidden{opacity:0;pointer-events:none}
@@ -370,20 +376,24 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:var(--bg);color:var(--te
 .login-field label{display:block;font-size:10.5px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
 .login-field input{width:100%;height:46px;padding:0 14px;border:1.5px solid var(--border2);border-radius:10px;font-family:inherit;font-size:14px;font-weight:600;color:var(--text);background:var(--surface);outline:none;transition:border-color .15s,box-shadow .15s}
 .login-field input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(42,90,164,0.12)}
-.login-btn{width:100%;height:48px;background:linear-gradient(135deg,var(--blue),var(--blue-d));color:#fff;border:none;border-radius:11px;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;margin-top:10px;transition:all .15s;letter-spacing:.2px;box-shadow:0 4px 16px rgba(42,90,164,0.35)}
-.login-btn:hover{background:linear-gradient(135deg,var(--blue-d),var(--blue-dd));transform:translateY(-1px)}
+.login-btn{width:100%;height:48px;background:linear-gradient(135deg,var(--gold),var(--gold-d));color:#3a2400;border:none;border-radius:11px;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;margin-top:10px;transition:all .15s;letter-spacing:.2px;box-shadow:0 4px 16px rgba(244,163,29,0.4)}
+.login-btn:hover{background:linear-gradient(135deg,var(--gold-d),#b56f08);color:#fff;transform:translateY(-1px)}
 .login-btn:active{transform:translateY(0)}
 .login-err{background:var(--red-l);border:1.5px solid var(--red);color:var(--red);border-radius:8px;padding:10px 14px;font-size:13px;font-weight:700;margin-bottom:14px;display:none}
 .login-err.show{display:block}
 
 #appScreen{display:none}
 #appScreen.visible{display:block}
-.hdr{background:linear-gradient(90deg,var(--blue-dd) 0%,var(--blue) 100%);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:58px;box-shadow:0 3px 16px rgba(42,90,164,0.35);position:sticky;top:0;z-index:300}
-.hdr-brand{display:flex;align-items:center;gap:11px}
-.hdr-logo{width:36px;height:36px;background:var(--gold);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:19px;box-shadow:0 2px 8px rgba(0,0,0,0.2)}
-.hdr-title{font-size:16px;font-weight:900;letter-spacing:-.3px}
-.hdr-sub{font-size:11px;opacity:.7;margin-top:1px;font-weight:600}
-.hdr-right{display:flex;align-items:center;gap:10px}
+.hdr{background:var(--blue-dd);color:#fff;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 24px;min-height:58px;box-shadow:0 3px 16px rgba(21,47,96,0.35);position:sticky;top:0;z-index:300;flex-wrap:wrap;border-bottom:3px solid var(--gold)}
+.hdr-brand{display:flex;align-items:center;gap:12px}
+.hdr-logo{width:38px;height:38px;background:var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;box-shadow:0 2px 8px rgba(0,0,0,0.25);flex-shrink:0}
+.hdr-title{font-size:16.5px;font-weight:900;letter-spacing:-.2px}
+.hdr-sub{font-size:10.5px;opacity:.75;margin-top:1px;font-weight:700;text-transform:uppercase;letter-spacing:.8px}
+.hdr-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+@media (max-width:860px){
+  .hdr{padding:10px 14px}
+  .hdr-title{font-size:14.5px}
+}
 .user-badge{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,0.14);border:1.5px solid rgba(255,255,255,0.28);border-radius:8px;padding:5px 12px;font-size:12.5px;font-weight:700;color:#fff}
 .role-dot{width:8px;height:8px;border-radius:50%;background:#86efac}
 .role-dot.admin{background:var(--gold)}
@@ -396,14 +406,23 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:var(--bg);color:var(--te
 .hbtn:hover{background:rgba(255,255,255,0.25)}
 .hbtn.logout{border-color:rgba(220,38,38,0.55);background:rgba(220,38,38,0.22)}
 .hbtn.logout:hover{background:rgba(220,38,38,0.45)}
-.tabs{background:var(--white);border-bottom:2px solid var(--border);display:flex;padding:0 24px;position:sticky;top:58px;z-index:200;box-shadow:0 2px 8px rgba(42,90,164,0.07);overflow-x:auto}
-.tab{padding:13px 20px;font-size:13.5px;font-weight:700;color:var(--text2);border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .14s;display:flex;align-items:center;gap:6px;white-space:nowrap}
-.tab:hover{color:var(--blue)}
-.tab.active{color:var(--blue);border-bottom-color:var(--gold)}
+.tabs{background:var(--white);border-bottom:1px solid var(--border);display:flex;padding:10px 18px;position:sticky;top:61px;z-index:200;box-shadow:0 2px 8px rgba(24,38,68,0.05);overflow-x:auto;gap:4px}
+.tab{padding:9px 16px;font-size:13.5px;font-weight:700;color:var(--text2);border:none;background:none;cursor:pointer;transition:all .14s;display:flex;align-items:center;gap:6px;white-space:nowrap;border-radius:20px}
+.tab:hover{color:var(--blue);background:var(--blue-l)}
+.tab.active{color:#fff;background:var(--blue-dd);box-shadow:0 2px 8px rgba(21,47,96,0.3)}
 .tab[data-admin-only]{display:none}
 .tab[data-admin-only].show{display:flex}
-.main{padding:22px 24px}
-.panel{display:none}.panel.active{display:block}
+.main{padding:22px 24px;max-width:1400px;margin:0 auto}
+@media (max-width:640px){.main{padding:14px 12px}}
+.panel{display:none}
+.panel.active{display:block;animation:panelIn .32s cubic-bezier(.16,1,.3,1)}
+@keyframes panelIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.panel.active>.card,.panel.active>#dashWrap>*{animation:cardIn .4s cubic-bezier(.16,1,.3,1) backwards}
+.panel.active>.card:nth-child(1),.panel.active>#dashWrap>*:nth-child(1){animation-delay:.02s}
+.panel.active>.card:nth-child(2),.panel.active>#dashWrap>*:nth-child(2){animation-delay:.08s}
+.panel.active>.card:nth-child(3),.panel.active>#dashWrap>*:nth-child(3){animation-delay:.14s}
+.panel.active>.card:nth-child(4),.panel.active>#dashWrap>*:nth-child(4){animation-delay:.2s}
+@keyframes cardIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 
 .perm-banner{border-radius:10px;padding:10px 16px;font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:14px}
 .perm-banner.warn{background:var(--gold-l);border:1.5px solid var(--gold-m);color:var(--amber)}
@@ -411,8 +430,8 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:var(--bg);color:var(--te
 .perm-banner.ok{background:var(--green-l);border:1.5px solid var(--green-m);color:var(--green)}
 .perm-banner.vip{background:linear-gradient(90deg,#fef7e8,#fff1f2);border:1.5px solid var(--gold-m);color:var(--amber)}
 
-.card{background:var(--white);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);margin-bottom:18px}
-.card-head{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);margin-bottom:18px;transition:box-shadow .2s}
+.card-head{padding:15px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;background:linear-gradient(180deg,#fbfcff,#fff)}
 .toolbar{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
 .fld{display:flex;flex-direction:column;gap:4px}
 .fld label{font-size:10.5px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.7px}
@@ -423,8 +442,8 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:var(--bg);color:var(--te
 .btn:hover{background:var(--blue-l);border-color:var(--blue);color:var(--blue)}
 .btn:active{transform:scale(.97)}
 .btn:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
-.btn-primary{background:linear-gradient(135deg,var(--blue),var(--blue-d));border-color:var(--blue-d);color:#fff}
-.btn-primary:hover{background:linear-gradient(135deg,var(--blue-d),var(--blue-dd));color:#fff}
+.btn-primary{background:linear-gradient(135deg,var(--gold),var(--gold-d));border-color:var(--gold-d);color:#3a2400;font-weight:800;box-shadow:0 2px 8px rgba(244,163,29,0.35)}
+.btn-primary:hover{background:linear-gradient(135deg,var(--gold-d),#b56f08);color:#fff;box-shadow:0 4px 14px rgba(244,163,29,0.45);transform:translateY(-1px)}
 .btn-gold{background:var(--gold-l);border-color:var(--gold);color:var(--amber)}
 .btn-gold:hover{background:var(--gold);color:#fff;border-color:var(--gold-d)}
 .btn-green{background:var(--green-l);border-color:var(--green);color:var(--green)}
@@ -442,7 +461,7 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:var(--bg);color:var(--te
 .matrix-wrap{overflow-x:auto}
 table.mx{border-collapse:collapse;width:100%;table-layout:fixed}
 table.mx th,table.mx td{border:1px solid var(--border);padding:0;text-align:center}
-.col-name{width:160px}.col-d{width:42px;min-width:36px}
+.col-name{width:220px}.col-d{width:42px;min-width:36px}
 .mx-r1{background:var(--blue);height:34px}
 .mx-r1 th{color:#fff;font-size:12px;font-weight:800;border-color:rgba(255,255,255,0.18)}
 .mx-r1 .th-nm{text-align:left;padding-left:14px;font-size:13px;position:sticky;left:0;z-index:11;background:var(--blue)}
@@ -478,6 +497,8 @@ th.holiday-th{background:#c0392b!important;color:#fff!important;border-color:#a9
 .chk{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;pointer-events:none;color:inherit}
 .chk.toi{color:var(--blue)}.chk.t7{color:var(--amber)}.chk.toicn{color:var(--teal)}
 .chk.hl{color:#c0392b;font-size:10px}
+td.dc:not(.no-edit):active{transform:scale(.93)}
+.s-btn:not(.no-edit):active,.hl-s-btn:not(.no-edit):active{transform:scale(.94)}
 tbody.rows tr:nth-child(even) td.nm{background:#f7f9fd}
 tbody.rows tr:nth-child(even) td.dc.off{background:#f7f9fd}
 tbody.rows tr:nth-child(even) td.dc.vcn.off{background:#f0fdf4}
@@ -494,8 +515,8 @@ tbody.rows tr:nth-child(even) td.dc.vt7.off{background:#fffbeb}
 .sun-date .holiday-tag{font-size:10.5px;font-weight:700;color:#c0392b;background:#ffe4e1;padding:2px 7px;border-radius:4px;display:inline-block;margin-top:2px}
 .sun-staff{display:flex;flex-wrap:wrap;gap:8px;flex:1}
 .s-btn{padding:6px 14px;border:1.5px solid var(--border2);border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;background:var(--white);color:var(--text2);transition:all 0.15s;user-select:none}
-.s-btn:hover{border-color:var(--blue-m);background:var(--blue-l);color:var(--blue)}
-.s-btn.active{background:var(--blue);border-color:var(--blue);color:#fff}
+.s-btn:hover{border-color:var(--blue-m);background:var(--blue-l);color:var(--blue);transform:translateY(-1px)}
+.s-btn.active{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 2px 8px rgba(42,90,164,0.35)}
 .s-btn.no-edit{cursor:default!important;pointer-events:none}
 .s-btn.no-edit:hover{border-color:var(--border2)!important;background:var(--white)!important;color:var(--text2)!important}
 .s-btn.no-edit.active{background:var(--blue);border-color:var(--blue);color:#fff}
@@ -527,7 +548,8 @@ tbody.rows tr:nth-child(even) td.dc.vt7.off{background:#fffbeb}
 .hl-s-btn.no-edit.active{background:#c0392b;border-color:#a93226;color:#fff}
 
 .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:20px}
-.kpi{background:var(--white);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px 18px;box-shadow:var(--sh);border-top:4px solid var(--blue)}
+.kpi{background:var(--white);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px 18px;box-shadow:var(--sh);border-top:4px solid var(--blue);transition:transform .15s,box-shadow .15s}
+.kpi:hover{transform:translateY(-2px);box-shadow:var(--sh-lg)}
 .kpi.g{border-top-color:var(--green)}.kpi.a{border-top-color:var(--gold)}.kpi.p{border-top-color:var(--purple)}.kpi.r{border-top-color:var(--red)}
 .kpi-lbl{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:6px}
 .kpi-val{font-size:28px;font-weight:900;font-family:'IBM Plex Mono',monospace;letter-spacing:-1.5px;color:var(--blue)}
@@ -557,7 +579,8 @@ table.st tfoot td{background:var(--blue-l);font-weight:800;color:var(--blue);bor
 .acc-card.vip-card{border-top:4px solid var(--gold);background:linear-gradient(135deg,#fff,#fef7e8);box-shadow:0 4px 20px rgba(244,163,29,0.18)}
 .vip-crown{display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,var(--gold-l),#fff1c4);border:1.5px solid var(--gold-m);border-radius:8px;padding:3px 9px;font-size:11px;font-weight:800;color:var(--amber)}
 .acc-header{display:flex;align-items:center;gap:10px}
-.acc-avatar{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#fff;flex-shrink:0}
+.acc-avatar{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#fff;flex-shrink:0;overflow:hidden}
+.acc-avatar img{width:100%;height:100%;object-fit:cover}
 .acc-avatar.av-admin{background:linear-gradient(135deg,var(--blue),var(--blue-d))}
 .acc-avatar.av-staff{background:linear-gradient(135deg,var(--green),#15803d)}
 .acc-avatar.av-vip{background:linear-gradient(135deg,var(--gold),var(--gold-d));box-shadow:0 2px 10px rgba(244,163,29,0.4)}
@@ -601,7 +624,7 @@ table.st tfoot td{background:var(--blue-l);font-weight:800;color:var(--blue);bor
 .modal-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
 .mult-selector{display:flex;gap:8px}
-.mult-btn{flex:1;padding:10px 8px;border:2px solid var(--border2);border-radius:10px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;background:var(--surface);color:var(--text2);transition:all .15px;text-align:center}
+.mult-btn{flex:1;padding:10px 8px;border:2px solid var(--border2);border-radius:10px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;background:var(--surface);color:var(--text2);transition:all .15s;text-align:center}
 .mult-btn:hover{border-color:var(--blue-m);background:var(--blue-l);color:var(--blue)}
 .mult-btn.sel-x1{border-color:var(--green);background:var(--green-l);color:var(--green)}
 .mult-btn.sel-x15{border-color:var(--gold);background:var(--gold-l);color:var(--amber)}
@@ -673,6 +696,14 @@ table.st tfoot td{background:var(--blue-l);font-weight:800;color:var(--blue);bor
 .swap-open-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center;flex-shrink:0}
 .swap-empty{padding:12px 16px;background:var(--green-l);border-radius:10px;font-size:13px;color:var(--green);font-weight:700;border:1px solid var(--green-m);display:flex;align-items:center;gap:8px}
 .swap-hist-sep{padding-top:16px;border-top:1px solid var(--border);margin-bottom:10px}
+#swapBadge{animation:badgePulse 1.8s ease-in-out infinite}
+@keyframes badgePulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,0.55)}50%{box-shadow:0 0 0 5px rgba(220,38,38,0)}}
+.swap-card,.swap-open-card,.acc-card,.holiday-item,.dash-card{transition:transform .18s,box-shadow .18s}
+.swap-card:hover,.swap-open-card:hover{transform:translateY(-2px)}
+.acc-card:hover{transform:translateY(-3px);box-shadow:var(--sh-lg)}
+.dash-card:hover{box-shadow:var(--sh-lg)}
+.dash-staff-pill,.pill,.s-btn,.hl-s-btn{transition:transform .12s,background .15s,border-color .15s,color .15s,box-shadow .15s}
+.dash-staff-pill:hover{transform:translateY(-1px)}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:#c0cfe0;border-radius:3px}
@@ -739,6 +770,33 @@ td.dc.cell-active .chk { color: #fff !important; }
 .dash-progress-bar.full{background:var(--green)}
 .dash-progress-bar.low{background:var(--red)}
 .today-highlight{background:linear-gradient(90deg,#fef9ee,#fff);border-left:4px solid var(--gold)!important}
+
+/* ── Avatars ── */
+.avatar-circle{border-radius:50%;object-fit:cover;flex-shrink:0;display:inline-block;vertical-align:middle;background:linear-gradient(135deg,var(--blue),var(--blue-d))}
+.avatar-fallback{border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:900;flex-shrink:0;vertical-align:middle;background:linear-gradient(135deg,var(--blue),var(--blue-d))}
+.hdr-avatar-btn{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,0.14);border:1.5px solid rgba(255,255,255,0.28);border-radius:20px;padding:4px 12px 4px 4px;cursor:pointer;transition:background .14s}
+.hdr-avatar-btn:hover{background:rgba(255,255,255,0.26)}
+.nm-avatar{width:20px;height:20px;font-size:9.5px;margin-right:6px}
+.avatar-upload-row{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.avatar-upload-preview{width:64px;height:64px;font-size:24px}
+.avatar-upload-actions{display:flex;flex-direction:column;gap:6px}
+.avatar-upload-actions input[type=file]{display:none}
+
+/* ── Tên KTV trong ma trận: chống tràn + có thể bấm xem avatar ── */
+td.nm{overflow:hidden;text-overflow:ellipsis}
+tbody.rows td.nm{cursor:pointer;transition:background .12s}
+tbody.rows td.nm:hover{background:#eef3fb}
+tbody.rows tr:nth-child(even) td.nm:hover{background:#e9eff9}
+
+/* ── Avatar Preview Modal ── */
+.avatar-view-overlay{position:fixed;inset:0;background:rgba(15,23,42,0.6);z-index:10000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
+.avatar-view-overlay.show{display:flex}
+.avatar-view-box{background:var(--white);border-radius:18px;padding:28px 32px 24px;display:flex;flex-direction:column;align-items:center;gap:14px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.3);min-width:240px}
+.avatar-view-close{position:absolute;top:10px;right:10px;width:28px;height:28px;border-radius:50%;border:none;background:var(--surface);color:var(--text3);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .12s}
+.avatar-view-close:hover{background:var(--border2);color:var(--text)}
+.avatar-view-body{display:flex;align-items:center;justify-content:center}
+.avatar-view-img{width:140px;height:140px;font-size:52px;box-shadow:0 6px 20px rgba(0,0,0,0.15)}
+.avatar-view-name{font-size:15px;font-weight:800;color:var(--text)}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
@@ -786,10 +844,11 @@ td.dc.cell-active .chk { color: #fff !important; }
   </div>
   <div class="hdr-right">
     <div class="conn-badge"><div class="conn-dot"></div>Đã kết nối</div>
-    <div class="user-badge">
+    <button class="hdr-avatar-btn" id="userBadgeBtn" onclick="openMyAccountModal()" title="Tài khoản của tôi">
+      <span id="userAvatarWrap"></span>
       <div class="role-dot" id="roleDot"></div>
-      <span id="userBadgeName"></span>
-    </div>
+      <span id="userBadgeName" style="color:#fff;font-size:12.5px;font-weight:700"></span>
+    </button>
     <div class="hdr-actions">
       <button class="hbtn" onclick="exportHTMLReport()" title="Xuất báo cáo HTML đẹp">📊 Báo cáo</button>
       <button class="btn btn-green" onclick="exportExcel()" title="Xuất Excel">📊 Excel</button>
@@ -1024,6 +1083,14 @@ td.dc.cell-active .chk { color: #fff !important; }
 <div class="modal-bg hidden" id="modalAcc">
   <div class="modal">
     <div class="modal-title" id="modalAccTitle">➕ Thêm Tài Khoản</div>
+    <div class="avatar-upload-row">
+      <span id="mAccAvatarPreviewWrap"></span>
+      <div class="avatar-upload-actions">
+        <label class="btn btn-sm" for="mAccAvatarFile" style="cursor:pointer">🖼️ Chọn ảnh</label>
+        <input type="file" id="mAccAvatarFile" accept="image/*" onchange="onAvatarFileChosen(event,'acc')">
+        <span style="font-size:11px;color:var(--text3);font-weight:600">Không bắt buộc</span>
+      </div>
+    </div>
     <div class="modal-field"><label>Họ và tên hiển thị</label><input type="text" id="mAccName" placeholder="Nguyễn Văn A..."></div>
     <div class="modal-field"><label>Tên đăng nhập</label><input type="text" id="mAccUser" placeholder="nguyenvana"></div>
     <div class="modal-field"><label>Mật khẩu</label><input type="password" id="mAccPass" placeholder="••••••••"></div>
@@ -1057,6 +1124,29 @@ td.dc.cell-active .chk { color: #fff !important; }
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('modalPwd')">Hủy</button>
       <button class="btn btn-primary" onclick="savePwd()">Cập nhật</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal My Account (self-service: avatar + quick password link) -->
+<div class="modal-bg hidden" id="modalMyAccount">
+  <div class="modal">
+    <div class="modal-title">👤 Tài Khoản Của Tôi</div>
+    <div class="avatar-upload-row">
+      <span id="myAvatarPreviewWrap"></span>
+      <div class="avatar-upload-actions">
+        <label class="btn btn-sm" for="myAvatarFile" style="cursor:pointer">🖼️ Chọn ảnh mới</label>
+        <input type="file" id="myAvatarFile" accept="image/*" onchange="onAvatarFileChosen(event,'my')">
+        <span style="font-size:11px;color:var(--text3);font-weight:600">JPG/PNG, tự resize nhỏ gọn</span>
+      </div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-title">Bảo mật</div>
+      <button class="btn" style="width:100%;justify-content:center" onclick="closeModal('modalMyAccount');openPwdModal(currentUser.id)">🔒 Đổi mật khẩu của tôi</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modalMyAccount')">Đóng</button>
+      <button class="btn btn-primary" onclick="saveMyAvatar()">💾 Lưu avatar</button>
     </div>
   </div>
 </div>
@@ -1130,6 +1220,14 @@ td.dc.cell-active .chk { color: #fff !important; }
       <input type="text" id="dialogInput" />
     </div>
     <div class="dialog-actions" id="dialogActions"></div>
+  </div>
+</div>
+<!-- Avatar Preview (click tên trong ma trận) -->
+<div id="avatarViewOverlay" class="avatar-view-overlay" onclick="if(event.target===this) closeAvatarView()">
+  <div class="avatar-view-box">
+    <button class="avatar-view-close" onclick="closeAvatarView()">✕</button>
+    <div id="avatarViewBody" class="avatar-view-body"></div>
+    <div id="avatarViewName" class="avatar-view-name"></div>
   </div>
 </div>
 <div class="modal-bg hidden" id="modalSwap">
@@ -1577,6 +1675,7 @@ function initApp(){
   const isVip = isVipUser();
   const roleLabel = isVip?' 👑':currentUser.role==='admin'?' (Admin)':currentUser.role==='hncs'?' (HNCS)':'';
   document.getElementById('userBadgeName').textContent = currentUser.name + roleLabel;
+  updateHeaderAvatar();
   const dot = document.getElementById('roleDot');
   dot.className = 'role-dot' + (isVip?' vip':currentUser.role==='admin'?' admin':currentUser.role==='hncs'?' hncs':'');
   // Tab lịch sử chỉ super admin
@@ -1874,7 +1973,8 @@ function renderMatrix(){
   window._staff.forEach(n=>{
     if(isStaffLocked(n)) return;
    const isSelf = myStaffLink() && n.trim() === myStaffLink().trim();
-h += `<td class="nm" style="${isSelf ? 'background:linear-gradient(90deg,#fef7e8,#fff);color:var(--amber);font-weight:900;border-right:3px solid var(--gold);' : ''}">${isSelf ? '⭐ ' + n : n}</td>`;
+    const nmAvatar = avatarHtml(n, getAvatarForStaff(n), 20, 'nm-avatar');
+h += `<td class="nm" data-name="${encodeURIComponent(n)}" title="${n} – bấm để xem ảnh đại diện" style="${isSelf ? 'background:linear-gradient(90deg,#fef7e8,#fff);color:var(--amber);font-weight:900;border-right:3px solid var(--gold);' : ''}">${nmAvatar}${isSelf ? '⭐ ' + n : n}</td>`;
     dates.forEach(({d,dw})=>{
       const hl = getHolidayForDate(y,m,d);
       const ds = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
@@ -1935,6 +2035,11 @@ h += `<td class="nm" style="${isSelf ? 'background:linear-gradient(90deg,#fef7e8
 
   // FIX: Gán listener mới một lần duy nhất
   _mxClickHandler = function(e){
+    const nmTd = e.target.closest('td.nm');
+    if(nmTd && nmTd.dataset.name){
+      openAvatarView(decodeURIComponent(nmTd.dataset.name));
+      return;
+    }
     const td = e.target.closest('td.dc');
     if(!td) return;
     if(td.classList.contains('no-edit')) return;
@@ -2385,6 +2490,104 @@ async function deleteStaff(idx){
 // ============================================================
 // ACCOUNT MANAGEMENT
 // ============================================================
+// ============================================================
+// AVATAR — upload, resize, render
+// ============================================================
+let _pendingAvatarMy = undefined;
+let _pendingAvatarAcc = undefined;
+
+function avatarHtml(name, url, size, extraClass){
+  extraClass = extraClass || '';
+  if(url){
+    return `<img src="${url}" class="avatar-circle ${extraClass}" style="width:${size}px;height:${size}px" alt="avatar">`;
+  }
+  const parts = (name||'?').trim().split(/\s+/);
+  const letter = ((parts[parts.length-1]||'?').charAt(0) || '?').toUpperCase();
+  const fs = Math.round(size*0.42);
+  return `<div class="avatar-fallback ${extraClass}" style="width:${size}px;height:${size}px;font-size:${fs}px">${letter}</div>`;
+}
+function openAvatarView(name){
+  if(!name) return;
+  const url = getAvatarForStaff(name);
+  const isSelf = myStaffLink() && name.trim() === myStaffLink().trim();
+  const body = document.getElementById('avatarViewBody');
+  body.innerHTML = avatarHtml(name, url, 140, 'avatar-view-img');
+  document.getElementById('avatarViewName').textContent = (isSelf ? '⭐ ' : '') + name;
+  document.getElementById('avatarViewOverlay').classList.add('show');
+}
+function closeAvatarView(){
+  document.getElementById('avatarViewOverlay').classList.remove('show');
+}
+function getAccountByStaff(staffName){
+  const s = (staffName||'').trim();
+  return (window._accounts||[]).find(a => a.staffLink && a.staffLink.trim() === s);
+}
+function getAvatarForStaff(staffName){
+  const acc = getAccountByStaff(staffName);
+  return acc ? (acc.avatar || null) : null;
+}
+function resizeImageToDataUrl(file, maxDim, cb){
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if(w >= h){ if(w > maxDim){ h = Math.round(h*maxDim/w); w = maxDim; } }
+      else { if(h > maxDim){ w = Math.round(w*maxDim/h); h = maxDim; } }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      cb(canvas.toDataURL('image/jpeg', 0.82));
+    };
+    img.onerror = () => dlgAlert('Không đọc được ảnh này, thử ảnh khác nhé.',{title:'Lỗi ảnh',icon:'⚠️',iconCls:'ic-warn'});
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function onAvatarFileChosen(evt, target){
+  const file = evt.target.files[0]; if(!file) return;
+  if(!file.type.startsWith('image/')){ dlgAlert('Vui lòng chọn file ảnh (JPG/PNG).',{title:'Sai định dạng',icon:'⚠️',iconCls:'ic-warn'}); return; }
+  if(file.size > 8*1024*1024){ dlgAlert('Ảnh quá lớn, vui lòng chọn ảnh dưới 8MB.',{title:'Ảnh quá lớn',icon:'⚠️',iconCls:'ic-warn'}); return; }
+  resizeImageToDataUrl(file, 160, dataUrl => {
+    if(target==='my'){ _pendingAvatarMy = dataUrl; renderAvatarPreview('my'); }
+    else { _pendingAvatarAcc = dataUrl; renderAvatarPreview('acc'); }
+  });
+}
+function renderAvatarPreview(target){
+  if(target==='my'){
+    const wrap = document.getElementById('myAvatarPreviewWrap');
+    if(wrap) wrap.innerHTML = avatarHtml(currentUser?currentUser.name:'?', _pendingAvatarMy, 64, 'avatar-upload-preview');
+  } else {
+    const nameEl = document.getElementById('mAccName');
+    const nm = nameEl && nameEl.value ? nameEl.value : '?';
+    const wrap = document.getElementById('mAccAvatarPreviewWrap');
+    if(wrap) wrap.innerHTML = avatarHtml(nm, _pendingAvatarAcc, 64, 'avatar-upload-preview');
+  }
+}
+function updateHeaderAvatar(){
+  const wrap = document.getElementById('userAvatarWrap');
+  if(wrap) wrap.innerHTML = avatarHtml(currentUser?currentUser.name:'?', currentUser?currentUser.avatar:null, 30);
+}
+function openMyAccountModal(){
+  if(!currentUser) return;
+  _pendingAvatarMy = currentUser.avatar || null;
+  renderAvatarPreview('my');
+  document.getElementById('myAvatarFile').value = '';
+  document.getElementById('modalMyAccount').classList.remove('hidden');
+}
+async function saveMyAvatar(){
+  const acc = window._accounts.find(a=>a.id===currentUser.id); if(!acc) return;
+  acc.avatar = (_pendingAvatarMy===undefined) ? (acc.avatar||null) : _pendingAvatarMy;
+  currentUser.avatar = acc.avatar;
+  if(window._saveAccountDoc) await window._saveAccountDoc(acc);
+  updateHeaderAvatar();
+  if(typeof renderAll==='function') renderAll();
+  const t4 = document.getElementById('t4');
+  if(t4 && t4.classList.contains('active')) renderAccounts();
+  closeModal('modalMyAccount');
+  showToast('Đã cập nhật avatar của bạn! 🖼️', 'success');
+}
+
 function renderAccounts(){
   document.getElementById('accGrid').innerHTML = window._accounts.map(a=>{
     const ia = a.role==='admin';
@@ -2394,7 +2597,7 @@ function renderAccounts(){
     if(isVip){
       return `<div class="acc-card vip-card">
         <div class="acc-header">
-          <div class="acc-avatar av-vip">👑</div>
+          <div class="acc-avatar av-vip">${a.avatar?`<img src="${a.avatar}" alt="avatar">`:'👑'}</div>
           <div class="acc-info">
             <div class="acc-name">${a.name}${isSelf?' <span style="font-size:11px;color:var(--blue)">(Bạn)</span>':''}</div>
             <div class="acc-role r-vip">👑 VIP – Quản Trị Viên Cao Cấp</div>
@@ -2414,7 +2617,7 @@ function renderAccounts(){
     }
    return `<div class="acc-card ${a.role==='admin'?'admin-card':a.role==='hncs'?'hncs-card':'staff-card'}">
       <div class="acc-header">
-        <div class="acc-avatar ${a.role==='admin'?'av-admin':a.role==='hncs'?'av-hncs':'av-staff'}">${a.name.charAt(0)}</div>
+        <div class="acc-avatar ${a.role==='admin'?'av-admin':a.role==='hncs'?'av-hncs':'av-staff'}">${a.avatar?`<img src="${a.avatar}" alt="avatar">`:(()=>{const p=(a.name||'?').trim().split(/\s+/);return (p[p.length-1]||'?').charAt(0).toUpperCase();})()}</div>
         <div class="acc-info">
           <div class="acc-name">${a.name}${isSelf?' <span style="font-size:11px;color:var(--blue)">(Bạn)</span>':''}</div>
           <div class="acc-role ${a.role==='admin'?'r-admin':a.role==='hncs'?'r-hncs':'r-staff'}">${a.role==='admin'?'🔑 Admin':a.role==='hncs'?'📊 Hành chính NS':'👤 Nhân viên'}</div>
@@ -2452,6 +2655,9 @@ function openAddAccount(){
   populateStaffSelect();
   document.getElementById('mAccStaff').value = '';
   updateRoleUI();
+  _pendingAvatarAcc = null;
+  document.getElementById('mAccAvatarFile').value = '';
+  renderAvatarPreview('acc');
   document.getElementById('modalAcc').classList.remove('hidden');
 }
 function openEditAccount(id){
@@ -2472,6 +2678,9 @@ function openEditAccount(id){
   populateStaffSelect();
   document.getElementById('mAccStaff').value = acc.staffLink||'';
   updateRoleUI();
+  _pendingAvatarAcc = acc.avatar || null;
+  document.getElementById('mAccAvatarFile').value = '';
+  renderAvatarPreview('acc');
   document.getElementById('modalAcc').classList.remove('hidden');
 }
 async function saveAccount(){
@@ -2498,17 +2707,20 @@ async function saveAccount(){
   if(editAccId){
     const acc = window._accounts.find(a=>a.id===editAccId); if(!acc) return;
     acc.name=name; acc.role=role; acc.staffLink=staffLink; if(pass) acc.password=pass;
+    acc.avatar = (_pendingAvatarAcc===undefined) ? (acc.avatar||null) : _pendingAvatarAcc;
     if(currentUser.id===editAccId){
-      currentUser.name=name; currentUser.role=role; currentUser.staffLink=staffLink;
+      currentUser.name=name; currentUser.role=role; currentUser.staffLink=staffLink; currentUser.avatar=acc.avatar;
       document.getElementById('userBadgeName').textContent = name+(isVipUser()?' 👑':(role==='admin'?' (Admin)':''));
+      updateHeaderAvatar();
     }
     if(window._saveAccountDoc) await window._saveAccountDoc(acc);
   } else {
-    const newAcc = {id:'acc_'+Date.now(), username, password:pass, name, role, staffLink};
+    const newAcc = {id:'acc_'+Date.now(), username, password:pass, name, role, staffLink, avatar:(_pendingAvatarAcc||null)};
     window._accounts.push(newAcc);
     if(window._saveAccountDoc) await window._saveAccountDoc(newAcc);
   }
   closeModal('modalAcc'); renderAccounts();
+  if(typeof renderAll==='function') renderAll();
   showToast(editAccId?'Đã cập nhật tài khoản':'Đã thêm tài khoản mới', 'success');
 }
 async function deleteAccount(id){
