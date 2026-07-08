@@ -115,8 +115,8 @@ async function loadAllFromFirebase() {
   }
 }
 
-let _unsubAtt = null, _unsubAttDay = null, _unsubHlReg = null, _unsubHlDayReg = null, _unsubIconMap = null;
-let _localWriteAtt = false, _localWriteAttDay = false, _localWriteHlReg = false, _localWriteHlDayReg = false, _localWriteIconMap = false;
+let _unsubAtt = null, _unsubAttDay = null, _unsubHlReg = null, _unsubHlDayReg = null, _unsubIconMap = null, _unsubAccounts = null;
+let _localWriteAtt = false, _localWriteAttDay = false, _localWriteHlReg = false, _localWriteHlDayReg = false, _localWriteIconMap = false, _localWriteAccounts = false;
 
 function startRealtimeListeners(m, y, onUpdate) {
   if (_unsubAtt) _unsubAtt();
@@ -124,6 +124,28 @@ function startRealtimeListeners(m, y, onUpdate) {
   if (_unsubHlReg) _unsubHlReg();
   if (_unsubHlDayReg) _unsubHlDayReg();
   if (_unsubIconMap) _unsubIconMap();
+  if (_unsubAccounts) _unsubAccounts();
+
+  // Realtime tài khoản (avatar, tên, vai trò...) - cập nhật ma trận ngay khi có thay đổi,
+  // không cần tải lại trang, kể cả khi thay đổi đến từ thiết bị/người dùng khác.
+  _unsubAccounts = onSnapshot(collection(db, 'accounts'), snap => {
+    window._accounts = snap.docs.map(d => d.data());
+    const cu = (typeof window._getCurrentUser === 'function') ? window._getCurrentUser() : null;
+    if (cu) {
+      const me = window._accounts.find(a => a.id === cu.id);
+      if (me) {
+        window._setCurrentUserAvatarEtc({ avatar: me.avatar || null, name: me.name, role: me.role, staffLink: me.staffLink });
+        if (typeof updateHeaderAvatar === 'function') updateHeaderAvatar();
+      }
+    }
+    if (!_localWriteAccounts) {
+      if (typeof renderAll === 'function') renderAll();
+      const t4 = document.getElementById('t4');
+      if (t4 && t4.classList.contains('active') && typeof renderAccounts === 'function') renderAccounts();
+    }
+    _localWriteAccounts = false;
+  });
+
   const key = m + '_' + y;
 
   _unsubAtt = onSnapshot(doc(db, 'att', key), snap => {
@@ -229,12 +251,12 @@ async function saveStaffList() {
 }
 async function saveAccountDoc(acc) {
   showSyncStatus('saving');
-  try { await setDoc(doc(db, 'accounts', acc.id), acc); showSyncStatus('online'); }
+  try { _localWriteAccounts = true; await setDoc(doc(db, 'accounts', acc.id), acc); showSyncStatus('online'); }
   catch(e) { showSyncStatus('error'); }
 }
 async function deleteAccountDoc(id) {
   showSyncStatus('saving');
-  try { await fbDel('accounts', id); showSyncStatus('online'); }
+  try { _localWriteAccounts = true; await fbDel('accounts', id); showSyncStatus('online'); }
   catch(e) { showSyncStatus('error'); }
 }
 async function saveHolidays() {
@@ -412,8 +434,8 @@ button,input,select,textarea{font-family:inherit}
 .tab.active{color:#fff;background:var(--blue-dd);box-shadow:0 2px 8px rgba(21,47,96,0.3)}
 .tab[data-admin-only]{display:none}
 .tab[data-admin-only].show{display:flex}
-.main{padding:22px 24px;max-width:1400px;margin:0 auto}
-@media (max-width:640px){.main{padding:14px 12px}}
+.main{padding:22px 24px;max-width:none;width:100%;margin:0 auto;box-sizing:border-box}
+@media (max-width:640px){.main{padding:10px 8px}}
 .panel{display:none}
 .panel.active{display:block;animation:panelIn .32s cubic-bezier(.16,1,.3,1)}
 @keyframes panelIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
@@ -457,20 +479,32 @@ button,input,select,textarea{font-family:inherit}
 .leg{display:flex;align-items:center;gap:6px}
 .leg-box{width:18px;height:14px;border-radius:3px}
 .card-body{padding:18px 20px}
+@media (max-width:900px){
+  .card-body{padding:12px 10px}
+  td.dc{height:30px}
+  .mx-r1{height:30px}.mx-r2{height:22px}
+}
+@media (max-width:600px){
+  td.dc{height:26px}
+  .mx-r1{height:26px}.mx-r2{height:18px}
+  td.nm{padding:0 4px 0 6px}
+}
 
-.matrix-wrap{overflow-x:auto}
-table.mx{border-collapse:collapse;width:max-content;min-width:100%;table-layout:fixed}
-table.mx th,table.mx td{border:1px solid var(--border);padding:0;text-align:center}
-.col-name{width:220px}.col-d{width:42px;min-width:36px}
+.matrix-wrap{overflow-x:hidden;width:100%}
+table.mx{border-collapse:collapse;width:100%;table-layout:fixed}
+table.mx th,table.mx td{border:1px solid var(--border);padding:0;text-align:center;overflow:hidden}
+.col-name{width:clamp(70px,16vw,210px)}
+.col-d{width:auto}
 .mx-r1{background:var(--blue);height:34px}
-.mx-r1 th{color:#fff;font-size:12px;font-weight:800;border-color:rgba(255,255,255,0.18)}
-.mx-r1 .th-nm{text-align:left;padding-left:14px;font-size:13px;position:sticky;left:0;z-index:11;background:var(--blue)}
+.mx-r1 th{color:#fff;font-size:clamp(8px,1.3vw,12px);font-weight:800;border-color:rgba(255,255,255,0.18)}
+.mx-r1 .th-nm{text-align:left;padding-left:10px;font-size:clamp(9px,1.6vw,13px);position:sticky;left:0;z-index:11;background:var(--blue);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mx-r2{background:var(--blue-d);height:26px}
-.mx-r2 th{font-size:9.5px;font-weight:700;color:rgba(255,255,255,0.75);border-color:rgba(255,255,255,0.12)}
-.mx-r2 .th-nm2{position:sticky;left:0;z-index:11;background:var(--blue-d)}
+.mx-r2 th{font-size:clamp(6.5px,1vw,9.5px);font-weight:700;color:rgba(255,255,255,0.75);border-color:rgba(255,255,255,0.12)}
+.mx-r2 .th-nm2{position:sticky;left:0;z-index:11;background:var(--blue-d);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mx-r2 .dcn{color:#86efac}.mx-r2 .dt7{color:var(--gold-m)}.mx-r2 .dhl{color:#fca5a5}
 .mx-r1 .dcn2{color:#86efac}.mx-r1 .dt72{color:var(--gold-m)}
-td.nm{text-align:left;padding:0 10px 0 14px;font-size:12.5px;font-weight:700;white-space:nowrap;background:var(--white);position:sticky;left:0;z-index:5;border-right:2px solid var(--border2)}
+td.nm{text-align:left;padding:0 8px 0 10px;font-size:clamp(9px,1.5vw,12.5px);font-weight:700;white-space:nowrap;background:var(--white);position:sticky;left:0;z-index:5;border-right:2px solid var(--border2);overflow:hidden;text-overflow:ellipsis}
+td.nm .nm-avatar{width:clamp(14px,2.2vw,20px)!important;height:clamp(14px,2.2vw,20px)!important;flex-shrink:0}
 td.dc{height:36px;cursor:pointer;transition:background .1s;vertical-align:middle;user-select:none}
 td.dc.no-edit{cursor:default!important}
 td.dc.no-edit:hover{background:inherit!important}
@@ -494,9 +528,9 @@ th.today-th{background:var(--gold)!important;color:#fff!important;border-color:v
 th.today-th::after{content:'▼';position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);font-size:8px;color:var(--gold);line-height:1}
 th.holiday-th{background:#c0392b!important;color:#fff!important;border-color:#a93226!important}
 .sun-row.today-sun{background:linear-gradient(90deg,#fef9ee,#fff);border-left:3px solid var(--gold)}
-.chk{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;pointer-events:none;color:inherit}
+.chk{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:clamp(10px,2vw,18px);font-weight:900;pointer-events:none;color:inherit}
 .chk.toi{color:var(--blue)}.chk.t7{color:var(--amber)}.chk.toicn{color:var(--teal)}
-.chk.hl{color:#c0392b;font-size:10px}
+.chk.hl{color:#c0392b;font-size:clamp(7px,1.2vw,10px)}
 td.dc:not(.no-edit):active{transform:scale(.93)}
 .s-btn:not(.no-edit):active,.hl-s-btn:not(.no-edit):active{transform:scale(.94)}
 tbody.rows tr:nth-child(even) td.nm{background:#f7f9fd}
@@ -1401,6 +1435,8 @@ window._firebaseReady = false;
 window._iconMap = {};  
 
 let currentUser = null;
+window._getCurrentUser = function(){ return currentUser; };
+window._setCurrentUserAvatarEtc = function(patch){ if(currentUser && patch) Object.assign(currentUser, patch); };
 let editAccId = null, pwdAccId = null, editHolidayId = null;
 let _selectedMult = '1.5';
 
@@ -1950,7 +1986,7 @@ function renderMatrix(){
   const dates = [];
   for(let d=1; d<=days; d++) dates.push({d, dw:dowOf(y,m,d)});
 
-  let h = '<div style="overflow-x:auto"><table class="mx"><thead>';
+  let h = '<div style="width:100%"><table class="mx"><thead>';
   h += `<tr class="mx-r1"><th class="col-name th-nm">Họ và tên</th>`;
   dates.forEach(({d,dw})=>{
     const hl = getHolidayForDate(y,m,d);
