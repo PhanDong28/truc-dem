@@ -1071,44 +1071,95 @@ td.dc:not(.no-edit):hover .chk{ transform:scale(1.15); }
 }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <style id="wow-effects-style">
-/* ── Hôm nay – glow nhấp nháy ── */
+ <style id="wow-effects-style">
+/* ── Hôm nay – viền chạy sáng kiểu neon xoay quanh ── */
 @keyframes todayGlow{
-  0%,100%{ box-shadow:0 0 0 2px var(--gold), 0 0 10px 2px rgba(244,163,29,0.55); }
-  50%{ box-shadow:0 0 0 2px var(--gold-d), 0 0 20px 6px rgba(244,163,29,0.9); }
+  0%,100%{ box-shadow:0 0 0 2px var(--gold), 0 0 14px 4px rgba(244,163,29,0.65), inset 0 0 10px rgba(244,163,29,0.25); }
+  50%{ box-shadow:0 0 0 2px #fff, 0 0 28px 10px rgba(244,163,29,1), inset 0 0 16px rgba(244,163,29,0.5); }
 }
-td.dc.today-col{ animation:todayGlow 1.8s ease-in-out infinite; position:relative; z-index:2; }
-th.today-th{ animation:todayGlow 1.8s ease-in-out infinite; }
+td.dc.today-col{ animation:todayGlow 1.4s ease-in-out infinite; position:relative; z-index:2; }
+th.today-th{ animation:todayGlow 1.4s ease-in-out infinite; }
+td.dc.today-col::before{
+  content:''; position:absolute; inset:-3px; border-radius:3px;
+  background:conic-gradient(from 0deg, var(--gold), transparent 25%, transparent 75%, var(--gold));
+  z-index:-1; animation:spinBorder 2.2s linear infinite; opacity:.85;
+}
+@keyframes spinBorder{ to{ transform:rotate(360deg); } }
 
-/* ── Ripple khi click ô ── */
+/* ── Ripple đa lớp: sóng vàng + hạt bắn tung tóe ── */
 .wow-ripple{
   position:absolute; border-radius:50%;
-  background:rgba(244,163,29,0.55);
-  transform:scale(0);
-  pointer-events:none;
-  animation:wowRippleAnim .55s ease-out forwards;
-  z-index:20;
+  background:radial-gradient(circle, rgba(255,220,120,0.9), rgba(244,163,29,0.5) 60%, transparent 75%);
+  transform:scale(0); pointer-events:none;
+  animation:wowRippleAnim .65s cubic-bezier(.2,.8,.3,1) forwards;
+  z-index:22; box-shadow:0 0 18px 4px rgba(244,163,29,0.7);
 }
-@keyframes wowRippleAnim{ to{ transform:scale(2.6); opacity:0; } }
+@keyframes wowRippleAnim{
+  0%{ transform:scale(0); opacity:1; }
+  70%{ opacity:.7; }
+  100%{ transform:scale(3.2); opacity:0; }
+}
+.wow-spark{
+  position:absolute; width:5px; height:5px; border-radius:50%;
+  background:#fff8dd; pointer-events:none; z-index:23;
+  box-shadow:0 0 6px 2px rgba(244,163,29,0.9);
+  animation:wowSparkFly .5s ease-out forwards;
+}
+@keyframes wowSparkFly{
+  0%{ transform:translate(0,0) scale(1); opacity:1; }
+  100%{ transform:translate(var(--sx),var(--sy)) scale(0); opacity:0; }
+}
 
-/* ── Nháy hàng / cột khi click ── */
+/* ── Nháy hàng / cột: gradient quét qua thay vì phẳng ── */
 @keyframes wowFlash{
-  0%{ background-color:rgba(244,163,29,0.5); }
-  100%{ background-color:transparent; }
+  0%{ background:linear-gradient(90deg, rgba(244,163,29,.75), rgba(244,163,29,.35)); }
+  60%{ background:rgba(244,163,29,.18); }
+  100%{ background:transparent; }
 }
-.wow-flash-row td{ animation:wowFlash .6s ease-out; }
-.wow-flash-col{ animation:wowFlash .6s ease-out; }
+.wow-flash-row td{ animation:wowFlash .75s ease-out; }
+.wow-flash-col{ animation:wowFlashCol .75s ease-out; }
+@keyframes wowFlashCol{
+  0%{ background:linear-gradient(180deg, rgba(42,90,164,.7), rgba(42,90,164,.3)); }
+  60%{ background:rgba(42,90,164,.15); }
+  100%{ background:transparent; }
+}
+/* icon "nảy" khi vừa đổi ca */
+.wow-pop .chk{ animation:wowPopIcon .45s cubic-bezier(.34,1.8,.64,1); }
+@keyframes wowPopIcon{
+  0%{ transform:scale(0.2) rotate(-25deg); opacity:0; }
+  60%{ transform:scale(1.35) rotate(8deg); opacity:1; }
+  100%{ transform:scale(1) rotate(0); }
+}
 
-/* ── Spotlight beam (crosshair quét) ── */
+/* ── Spotlight beam: đậm hơn, có viền sáng rõ + đầu mút phát sáng ── */
 #mxWrap{ position:relative; }
 .wow-beam{
   position:absolute; pointer-events:none; z-index:4;
-  background:linear-gradient(90deg,transparent,rgba(244,163,29,0.14),rgba(244,163,29,0.28),rgba(244,163,29,0.14),transparent);
-  opacity:0; transition:opacity .15s;
+  background:linear-gradient(90deg,transparent,rgba(244,163,29,0.22),rgba(255,210,110,0.5),rgba(244,163,29,0.22),transparent);
+  opacity:0; transition:opacity .18s;
+  box-shadow:0 0 20px 4px rgba(244,163,29,0.35);
 }
 .wow-beam.show{ opacity:1; }
 .wow-beam-v{
-  background:linear-gradient(180deg,transparent,rgba(42,90,164,0.14),rgba(42,90,164,0.28),rgba(42,90,164,0.14),transparent);
+  background:linear-gradient(180deg,transparent,rgba(42,90,164,0.22),rgba(120,170,240,0.55),rgba(42,90,164,0.22),transparent);
+  box-shadow:0 0 20px 4px rgba(42,90,164,0.35);
+}
+/* điểm giao nhau crosshair phát sáng mạnh */
+.wow-crosshair-dot{
+  position:absolute; width:14px; height:14px; border-radius:50%;
+  pointer-events:none; z-index:7;
+  background:radial-gradient(circle, rgba(255,255,255,0.95), rgba(244,163,29,0.6) 60%, transparent 75%);
+  box-shadow:0 0 16px 6px rgba(244,163,29,0.6);
+  opacity:0; transition:opacity .15s, transform .1s;
+  transform:translate(-50%,-50%) scale(0.6);
+}
+.wow-crosshair-dot.show{ opacity:1; transform:translate(-50%,-50%) scale(1); }
+
+/* Tên KTV phát sáng khi hover crosshair */
+tbody.rows tr.row-hover td.nm{
+  text-shadow:0 0 8px rgba(42,90,164,0.5);
+  transform:scale(1.015);
+  transition:transform .15s, background .15s;
 }
 </style>
 </head>
@@ -4786,45 +4837,71 @@ async function claimOpenShift(reqId) {
   document.addEventListener('DOMContentLoaded', ()=> setTimeout(enhanceSwapAndArrows, 600));
 })();
 </script>
-  <script id="wow-effects-script">
+<script id="wow-effects-script">
 (function(){
+  function spawnSparks(container, x, y){
+    const colors = ['#fde68a','#fff8dd','#f4a31d'];
+    for(let i=0;i<7;i++){
+      const s = document.createElement('span');
+      s.className = 'wow-spark';
+      const angle = (Math.PI*2*i/7) + Math.random()*0.5;
+      const dist = 22 + Math.random()*18;
+      s.style.setProperty('--sx', Math.cos(angle)*dist + 'px');
+      s.style.setProperty('--sy', Math.sin(angle)*dist + 'px');
+      s.style.left = x + 'px';
+      s.style.top = y + 'px';
+      s.style.background = colors[i % colors.length];
+      container.appendChild(s);
+      setTimeout(()=>s.remove(), 550);
+    }
+  }
+
   function initWowEffects(){
     const wrap = document.getElementById('mxWrap');
     if(!wrap) return;
 
-    // Beam bị xóa mỗi lần renderMatrix() ghi lại innerHTML → tạo lại mỗi render
     const beamH = document.createElement('div');
     beamH.className = 'wow-beam';
     const beamV = document.createElement('div');
     beamV.className = 'wow-beam wow-beam-v';
+    const dot = document.createElement('div');
+    dot.className = 'wow-crosshair-dot';
     wrap.appendChild(beamH);
     wrap.appendChild(beamV);
+    wrap.appendChild(dot);
     wrap._wowBeamH = beamH;
     wrap._wowBeamV = beamV;
+    wrap._wowDot = dot;
 
-    if(wrap.dataset.wowBound) return; // listener chỉ gắn 1 lần duy nhất
+    if(wrap.dataset.wowBound) return;
     wrap.dataset.wowBound = '1';
 
-    // Ripple + nháy hàng/cột khi click chọn ca
     wrap.addEventListener('click', function(e){
       const td = e.target.closest('td.dc');
       if(!td || td.classList.contains('no-edit')) return;
 
       const rect = td.getBoundingClientRect();
+      const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+
       const ripple = document.createElement('span');
       ripple.className = 'wow-ripple';
-      const size = Math.max(rect.width, rect.height) * 1.4;
+      const size = Math.max(rect.width, rect.height) * 1.6;
       ripple.style.width = ripple.style.height = size + 'px';
-      ripple.style.left = (e.clientX - rect.left - size/2) + 'px';
-      ripple.style.top  = (e.clientY - rect.top  - size/2) + 'px';
-      td.style.overflow = 'hidden';
+      ripple.style.left = (cx - size/2) + 'px';
+      ripple.style.top  = (cy - size/2) + 'px';
+      td.style.overflow = 'visible';
       td.appendChild(ripple);
-      setTimeout(()=>ripple.remove(), 600);
+      setTimeout(()=>ripple.remove(), 700);
+
+      spawnSparks(td, cx, cy);
+
+      td.classList.add('wow-pop');
+      setTimeout(()=>td.classList.remove('wow-pop'), 500);
 
       const tr = td.closest('tr');
       if(!tr) return;
       tr.classList.add('wow-flash-row');
-      setTimeout(()=>tr.classList.remove('wow-flash-row'), 650);
+      setTimeout(()=>tr.classList.remove('wow-flash-row'), 800);
 
       const allTds = Array.from(tr.querySelectorAll('td'));
       const colIdx = allTds.indexOf(td);
@@ -4834,17 +4911,21 @@ async function claimOpenShift(reqId) {
           const cell = row.querySelectorAll('td')[colIdx];
           if(cell){
             cell.classList.add('wow-flash-col');
-            setTimeout(()=>cell.classList.remove('wow-flash-col'), 650);
+            setTimeout(()=>cell.classList.remove('wow-flash-col'), 800);
           }
         });
       }
     });
 
-    // Spotlight crosshair quét theo chuột
     wrap.addEventListener('mousemove', function(e){
       const td = e.target.closest('td.dc, td.nm');
-      const bH = wrap._wowBeamH, bV = wrap._wowBeamV;
-      if(!td || !bH || !bV){ bH&&bH.classList.remove('show'); bV&&bV.classList.remove('show'); return; }
+      const bH = wrap._wowBeamH, bV = wrap._wowBeamV, dot = wrap._wowDot;
+      if(!td || !bH || !bV){
+        bH&&bH.classList.remove('show');
+        bV&&bV.classList.remove('show');
+        dot&&dot.classList.remove('show');
+        return;
+      }
       const table = wrap.querySelector('table.mx');
       if(!table) return;
       const wrapRect = wrap.getBoundingClientRect();
@@ -4861,15 +4942,23 @@ async function claimOpenShift(reqId) {
       bV.style.width = tdRect.width + 'px';
       bV.style.height = table.offsetHeight + 'px';
       bV.classList.add('show');
+
+      if(td.classList.contains('dc')){
+        dot.style.left = (tdRect.left - wrapRect.left + wrap.scrollLeft + tdRect.width/2) + 'px';
+        dot.style.top = (tdRect.top - wrapRect.top + tdRect.height/2) + 'px';
+        dot.classList.add('show');
+      } else {
+        dot.classList.remove('show');
+      }
     });
 
     wrap.addEventListener('mouseleave', function(){
       wrap._wowBeamH && wrap._wowBeamH.classList.remove('show');
       wrap._wowBeamV && wrap._wowBeamV.classList.remove('show');
+      wrap._wowDot && wrap._wowDot.classList.remove('show');
     });
   }
 
-  // Gắn lại hiệu ứng mỗi khi renderMatrix() chạy xong (vì bảng bị vẽ lại từ đầu)
   function patchRenderMatrix(){
     if(typeof window.renderMatrix === 'function' && !window.renderMatrix.__wowPatched){
       const orig = window.renderMatrix;
