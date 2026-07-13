@@ -1071,6 +1071,46 @@ td.dc:not(.no-edit):hover .chk{ transform:scale(1.15); }
 }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style id="wow-effects-style">
+/* ── Hôm nay – glow nhấp nháy ── */
+@keyframes todayGlow{
+  0%,100%{ box-shadow:0 0 0 2px var(--gold), 0 0 10px 2px rgba(244,163,29,0.55); }
+  50%{ box-shadow:0 0 0 2px var(--gold-d), 0 0 20px 6px rgba(244,163,29,0.9); }
+}
+td.dc.today-col{ animation:todayGlow 1.8s ease-in-out infinite; position:relative; z-index:2; }
+th.today-th{ animation:todayGlow 1.8s ease-in-out infinite; }
+
+/* ── Ripple khi click ô ── */
+.wow-ripple{
+  position:absolute; border-radius:50%;
+  background:rgba(244,163,29,0.55);
+  transform:scale(0);
+  pointer-events:none;
+  animation:wowRippleAnim .55s ease-out forwards;
+  z-index:20;
+}
+@keyframes wowRippleAnim{ to{ transform:scale(2.6); opacity:0; } }
+
+/* ── Nháy hàng / cột khi click ── */
+@keyframes wowFlash{
+  0%{ background-color:rgba(244,163,29,0.5); }
+  100%{ background-color:transparent; }
+}
+.wow-flash-row td{ animation:wowFlash .6s ease-out; }
+.wow-flash-col{ animation:wowFlash .6s ease-out; }
+
+/* ── Spotlight beam (crosshair quét) ── */
+#mxWrap{ position:relative; }
+.wow-beam{
+  position:absolute; pointer-events:none; z-index:4;
+  background:linear-gradient(90deg,transparent,rgba(244,163,29,0.14),rgba(244,163,29,0.28),rgba(244,163,29,0.14),transparent);
+  opacity:0; transition:opacity .15s;
+}
+.wow-beam.show{ opacity:1; }
+.wow-beam-v{
+  background:linear-gradient(180deg,transparent,rgba(42,90,164,0.14),rgba(42,90,164,0.28),rgba(42,90,164,0.14),transparent);
+}
+</style>
 </head>
 <body>
 
@@ -3351,7 +3391,9 @@ ${calRows.map(({d,dw,ds,hl,nightStaff,dayStaff,sunDayStaff})=>{
   return `<tr><td style="font-weight:800">${DOW_LBL[dw]}, ${d}/${m}/${y}${hl?`<br><span style="font-size:10px;color:#c0392b">${hl.name}</span>`:''}</td><td style="font-size:11.5px;font-weight:700">${hl?'🎌 Lễ':dw===0?'🌟 CN':dw===6?'🗓️ T7':'📋 Thường'}</td><td>${shifts}</td></tr>`;
 }).join('')}</tbody></table>`:'<div class="no-data">Chưa có ca trực nào.</div>'}</div>
 <div class="rpt-footer">Báo cáo tự động – Hệ thống Lịch Trực Đêm Kỹ Thuật | ${printDate}<br>Tài liệu nội bộ – Lưu hành nội bộ phòng Kỹ Thuật</div>
-</div></body></html>`;
+</div>
+</body>
+</html>;
   const blob=new Blob([html],{type:'text/html;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a'); a.href=url; a.download=`BaoCaoCong_KyThuat_T${m}_${y}.html`; a.click(); URL.revokeObjectURL(url);
@@ -4742,6 +4784,106 @@ async function claimOpenShift(reqId) {
 
   // Cũng chạy 1 lần khi DOM sẵn sàng, phòng khi panel đã render trước khi patch load
   document.addEventListener('DOMContentLoaded', ()=> setTimeout(enhanceSwapAndArrows, 600));
+})();
+</script>
+  <script id="wow-effects-script">
+(function(){
+  function initWowEffects(){
+    const wrap = document.getElementById('mxWrap');
+    if(!wrap) return;
+
+    // Beam bị xóa mỗi lần renderMatrix() ghi lại innerHTML → tạo lại mỗi render
+    const beamH = document.createElement('div');
+    beamH.className = 'wow-beam';
+    const beamV = document.createElement('div');
+    beamV.className = 'wow-beam wow-beam-v';
+    wrap.appendChild(beamH);
+    wrap.appendChild(beamV);
+    wrap._wowBeamH = beamH;
+    wrap._wowBeamV = beamV;
+
+    if(wrap.dataset.wowBound) return; // listener chỉ gắn 1 lần duy nhất
+    wrap.dataset.wowBound = '1';
+
+    // Ripple + nháy hàng/cột khi click chọn ca
+    wrap.addEventListener('click', function(e){
+      const td = e.target.closest('td.dc');
+      if(!td || td.classList.contains('no-edit')) return;
+
+      const rect = td.getBoundingClientRect();
+      const ripple = document.createElement('span');
+      ripple.className = 'wow-ripple';
+      const size = Math.max(rect.width, rect.height) * 1.4;
+      ripple.style.width = ripple.style.height = size + 'px';
+      ripple.style.left = (e.clientX - rect.left - size/2) + 'px';
+      ripple.style.top  = (e.clientY - rect.top  - size/2) + 'px';
+      td.style.overflow = 'hidden';
+      td.appendChild(ripple);
+      setTimeout(()=>ripple.remove(), 600);
+
+      const tr = td.closest('tr');
+      if(!tr) return;
+      tr.classList.add('wow-flash-row');
+      setTimeout(()=>tr.classList.remove('wow-flash-row'), 650);
+
+      const allTds = Array.from(tr.querySelectorAll('td'));
+      const colIdx = allTds.indexOf(td);
+      const tbody = wrap.querySelector('tbody.rows');
+      if(tbody && colIdx >= 0){
+        tbody.querySelectorAll('tr').forEach(row=>{
+          const cell = row.querySelectorAll('td')[colIdx];
+          if(cell){
+            cell.classList.add('wow-flash-col');
+            setTimeout(()=>cell.classList.remove('wow-flash-col'), 650);
+          }
+        });
+      }
+    });
+
+    // Spotlight crosshair quét theo chuột
+    wrap.addEventListener('mousemove', function(e){
+      const td = e.target.closest('td.dc, td.nm');
+      const bH = wrap._wowBeamH, bV = wrap._wowBeamV;
+      if(!td || !bH || !bV){ bH&&bH.classList.remove('show'); bV&&bV.classList.remove('show'); return; }
+      const table = wrap.querySelector('table.mx');
+      if(!table) return;
+      const wrapRect = wrap.getBoundingClientRect();
+      const tdRect = td.getBoundingClientRect();
+
+      bH.style.top = (tdRect.top - wrapRect.top) + 'px';
+      bH.style.left = '0px';
+      bH.style.width = table.offsetWidth + 'px';
+      bH.style.height = tdRect.height + 'px';
+      bH.classList.add('show');
+
+      bV.style.left = (tdRect.left - wrapRect.left + wrap.scrollLeft) + 'px';
+      bV.style.top = '0px';
+      bV.style.width = tdRect.width + 'px';
+      bV.style.height = table.offsetHeight + 'px';
+      bV.classList.add('show');
+    });
+
+    wrap.addEventListener('mouseleave', function(){
+      wrap._wowBeamH && wrap._wowBeamH.classList.remove('show');
+      wrap._wowBeamV && wrap._wowBeamV.classList.remove('show');
+    });
+  }
+
+  // Gắn lại hiệu ứng mỗi khi renderMatrix() chạy xong (vì bảng bị vẽ lại từ đầu)
+  function patchRenderMatrix(){
+    if(typeof window.renderMatrix === 'function' && !window.renderMatrix.__wowPatched){
+      const orig = window.renderMatrix;
+      window.renderMatrix = function(...args){
+        const r = orig.apply(this, args);
+        requestAnimationFrame(initWowEffects);
+        return r;
+      };
+      window.renderMatrix.__wowPatched = true;
+    } else if(typeof window.renderMatrix !== 'function'){
+      setTimeout(patchRenderMatrix, 300);
+    }
+  }
+  patchRenderMatrix();
 })();
 </script>
 </body>
