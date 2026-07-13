@@ -3393,7 +3393,7 @@ ${calRows.map(({d,dw,ds,hl,nightStaff,dayStaff,sunDayStaff})=>{
 <div class="rpt-footer">Báo cáo tự động – Hệ thống Lịch Trực Đêm Kỹ Thuật | ${printDate}<br>Tài liệu nội bộ – Lưu hành nội bộ phòng Kỹ Thuật</div>
 </div>
 </body>
-</html>;
+</html>`;
   const blob=new Blob([html],{type:'text/html;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a'); a.href=url; a.download=`BaoCaoCong_KyThuat_T${m}_${y}.html`; a.click(); URL.revokeObjectURL(url);
