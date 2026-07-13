@@ -55,6 +55,11 @@ window._fbGetAll = fbGetAll;
 async function bootstrapIfNeeded() {
   showSyncStatus('checking');
   try {
+    // FIX: nếu đã từng khởi tạo rồi thì KHÔNG BAO GIỜ tự tạo lại dữ liệu mặc định nữa,
+    // dù collection accounts có bị rỗng vì lý do gì đi nữa.
+    const flag = await fbGet('config', '_bootstrapped');
+    if (flag) { showSyncStatus('online'); return; }
+
     const accSnap = await getDocs(collection(db, 'accounts'));
     if (accSnap.empty) {
       const DEF_ACCOUNTS = [
@@ -80,6 +85,10 @@ async function bootstrapIfNeeded() {
         'Nguyễn Quang Hải','Nguyễn Văn Anh Tuấn','Phan Duy Đồng','Phan Việt Hưng','Nguyễn Hữu Khang','Nguyễn Văn Dũng'];
       await fbSet('config', 'staff', { list: DEF_STAFF });
     }
+
+    // FIX: đánh dấu đã khởi tạo xong — từ nay bootstrap sẽ luôn thoát sớm ở trên
+    await fbSet('config', '_bootstrapped', { at: Date.now() });
+
     showSyncStatus('online');
   } catch(e) {
     console.error('Bootstrap error:', e);
@@ -1060,7 +1069,6 @@ td.dc:not(.no-edit):hover .chk{ transform:scale(1.15); }
   .card, .dsh-card{ border-radius:14px; }
   .modal{ border-radius:18px; }
 }
-</style>
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
@@ -2081,10 +2089,10 @@ function calcP(n, m, y, std){
     if(isHlDayReg(m,y,ds,n)){
       nHLDay++;
       const effH = 8*mult;
-      hlDayH += 8; hlDayCong += effH/stdH; h += effH;
+      hlDayH += 8; hlDayCong += effH/stdH;
     }
   });
-  const cong = h/std;
+  const cong = h/std + hlNightCong + hlDayCong;
   const nHL = nHLNight+nHLDay;
   return{h,nT,n7,nC,nTC,nHLNight,nHLDay,nHL,hlNightH,hlDayH,hlNightCong,hlDayCong,tot:nT+n7+nC+nTC+nHL,cong};
 }
@@ -4323,9 +4331,9 @@ async function respondSwap(reqId, accept) {
 async function executeSwap(req) {
   const [myY, myM, myD] = req.myDate.split('-').map(Number);
 
-  // Xử lý ca của người GỬI
+// Xử lý ca của người GỬI
+  const myDs2 = req.myDate;
   if (req.myShiftType === 'day_cn' || req.myDayCN) {
-    // Ca ngày CN
     const k = mk(myM, myY);
     if (!window._attDay[k]) window._attDay[k] = {};
     if (!window._attDay[k][req.fromStaff]) window._attDay[k][req.fromStaff] = {};
@@ -4333,18 +4341,30 @@ async function executeSwap(req) {
     if (!window._attDay[k][req.targetStaff]) window._attDay[k][req.targetStaff] = {};
     window._attDay[k][req.targetStaff][myD] = true;
     if (window._saveAttDay) await window._saveAttDay(myM, myY);
+  } else if (req.myShiftType === 'hl_day') {
+    const k = myM + '_' + myY;
+    if (!window._hlDayReg[k]) window._hlDayReg[k] = {};
+    let arr = (window._hlDayReg[k][myDs2] || []).filter(x => x !== req.fromStaff);
+    if (!arr.includes(req.targetStaff)) arr.push(req.targetStaff);
+    window._hlDayReg[k][myDs2] = arr;
+    if (window._saveHlDayReg) await window._saveHlDayReg(myM, myY);
+  } else if (req.myShiftType === 'hl_night') {
+    const k = myM + '_' + myY;
+    if (!window._hlReg[k]) window._hlReg[k] = {};
+    let arr = (window._hlReg[k][myDs2] || []).filter(x => x !== req.fromStaff);
+    if (!arr.includes(req.targetStaff)) arr.push(req.targetStaff);
+    window._hlReg[k][myDs2] = arr;
+    if (window._saveHlReg) await window._saveHlReg(myM, myY);
   } else {
-    // Ca tối
     const fromShift = req.myShiftType || req.myShift || getC(myM, myY, req.fromStaff, myD);
     setC(myM, myY, req.fromStaff, myD, null);
     if (fromShift) setC(myM, myY, req.targetStaff, myD, fromShift);
-    // Xóa ca tối cũ của target nếu có (tránh trùng)
-    if (fromShift) setC(myM, myY, req.targetStaff, myD, fromShift);
   }
-
-  // Xử lý ca ngược lại nếu đổi 2 chiều
+  
+ // Xử lý ca ngược lại nếu đổi 2 chiều
   if (req.theirDate) {
     const [theirY, theirM, theirD] = req.theirDate.split('-').map(Number);
+    const theirDs2 = req.theirDate;
     if (req.theirShiftType === 'day_cn' || req.theirDayCN) {
       const k2 = mk(theirM, theirY);
       if (!window._attDay[k2]) window._attDay[k2] = {};
@@ -4353,6 +4373,20 @@ async function executeSwap(req) {
       if (!window._attDay[k2][req.fromStaff]) window._attDay[k2][req.fromStaff] = {};
       window._attDay[k2][req.fromStaff][theirD] = true;
       if (window._saveAttDay) await window._saveAttDay(theirM, theirY);
+    } else if (req.theirShiftType === 'hl_day') {
+      const k2 = theirM + '_' + theirY;
+      if (!window._hlDayReg[k2]) window._hlDayReg[k2] = {};
+      let arr = (window._hlDayReg[k2][theirDs2] || []).filter(x => x !== req.targetStaff);
+      if (!arr.includes(req.fromStaff)) arr.push(req.fromStaff);
+      window._hlDayReg[k2][theirDs2] = arr;
+      if (window._saveHlDayReg) await window._saveHlDayReg(theirM, theirY);
+    } else if (req.theirShiftType === 'hl_night') {
+      const k2 = theirM + '_' + theirY;
+      if (!window._hlReg[k2]) window._hlReg[k2] = {};
+      let arr = (window._hlReg[k2][theirDs2] || []).filter(x => x !== req.targetStaff);
+      if (!arr.includes(req.fromStaff)) arr.push(req.fromStaff);
+      window._hlReg[k2][theirDs2] = arr;
+      if (window._saveHlReg) await window._saveHlReg(theirM, theirY);
     } else {
       const targetShift = req.theirShiftType || req.theirShift || getC(theirM, theirY, req.targetStaff, theirD);
       setC(theirM, theirY, req.targetStaff, theirD, null);
