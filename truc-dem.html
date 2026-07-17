@@ -98,26 +98,31 @@ async function bootstrapIfNeeded() {
 
 async function loadAllFromFirebase() {
   try {
-    const staffDoc = await fbGet('config', 'staff');
+    // Tải song song để att, attMeta và attDay sẵn sàng cùng lúc trước lần render đầu.
+    const [staffDoc, allAcc, attAll, attMetaAll, attDayAll, holidaysDoc, lockedDoc,
+      hlRegAll, hlDayRegAll, iconMapDoc] = await Promise.all([
+      fbGet('config', 'staff'),
+      fbGetAll('accounts'),
+      fbGetAll('att'),
+      fbGetAll('attMeta'),
+      fbGetAll('attDay'),
+      fbGet('config', 'holidays'),
+      fbGet('config', 'lockedStaff'),
+      fbGetAll('hlReg'),
+      fbGetAll('hlDayReg'),
+      fbGet('config', 'iconMap')
+    ]);
     window._staff = staffDoc ? staffDoc.list : [];
-    const allAcc = await fbGetAll('accounts');
     window._accounts = Object.values(allAcc);
-    const attAll = await fbGetAll('att');
     window._att = attAll;
-    const attMetaAll = await fbGetAll('attMeta');
     window._attMeta = attMetaAll;
-    const attDayAll = await fbGetAll('attDay');
     window._attDay = attDayAll;
-    const holidaysDoc = await fbGet('config', 'holidays');
     window._holidays = holidaysDoc ? holidaysDoc.list : [];
-    const lockedDoc = await fbGet('config', 'lockedStaff');
     window._lockedStaff = lockedDoc ? lockedDoc.list : [];
-    const hlRegAll = await fbGetAll('hlReg');
     window._hlReg = hlRegAll;
-    const hlDayRegAll = await fbGetAll('hlDayReg');
     window._hlDayReg = hlDayRegAll;
-    const iconMapDoc = await fbGet('config', 'iconMap');
     window._iconMap = iconMapDoc ? iconMapDoc.map : {};
+    window._scheduleDataReady = true;
     return true;
   } catch(e) {
     console.error('Load error:', e);
@@ -1916,6 +1921,7 @@ window._lockedStaff = [];
 window._hlReg = {};
 window._hlDayReg = {};
 window._firebaseReady = false;
+window._scheduleDataReady = false;
 window._iconMap = {};  
 
 let currentUser = null;
