@@ -104,6 +104,8 @@ async function loadAllFromFirebase() {
     window._accounts = Object.values(allAcc);
     const attAll = await fbGetAll('att');
     window._att = attAll;
+    const attMetaAll = await fbGetAll('attMeta');
+    window._attMeta = attMetaAll;
     const attDayAll = await fbGetAll('attDay');
     window._attDay = attDayAll;
     const holidaysDoc = await fbGet('config', 'holidays');
@@ -124,11 +126,12 @@ async function loadAllFromFirebase() {
   }
 }
 
-let _unsubAtt = null, _unsubAttDay = null, _unsubHlReg = null, _unsubHlDayReg = null, _unsubIconMap = null, _unsubAccounts = null;
-let _localWriteAtt = false, _localWriteAttDay = false, _localWriteHlReg = false, _localWriteHlDayReg = false, _localWriteIconMap = false, _localWriteAccounts = false;
+let _unsubAtt = null, _unsubAttMeta = null, _unsubAttDay = null, _unsubHlReg = null, _unsubHlDayReg = null, _unsubIconMap = null, _unsubAccounts = null;
+let _localWriteAtt = false, _localWriteAttMeta = false, _localWriteAttDay = false, _localWriteHlReg = false, _localWriteHlDayReg = false, _localWriteIconMap = false, _localWriteAccounts = false;
 
 function startRealtimeListeners(m, y, onUpdate) {
   if (_unsubAtt) _unsubAtt();
+  if (_unsubAttMeta) _unsubAttMeta();
   if (_unsubAttDay) _unsubAttDay();
   if (_unsubHlReg) _unsubHlReg();
   if (_unsubHlDayReg) _unsubHlDayReg();
@@ -162,6 +165,12 @@ function startRealtimeListeners(m, y, onUpdate) {
     else delete window._att[key];
     if (!_localWriteAtt) { if (onUpdate) onUpdate(); }
     _localWriteAtt = false;
+  });
+  _unsubAttMeta = onSnapshot(doc(db, 'attMeta', key), snap => {
+    if (snap.exists()) window._attMeta[key] = snap.data();
+    else delete window._attMeta[key];
+    if (!_localWriteAttMeta) { if (onUpdate) onUpdate(); }
+    _localWriteAttMeta = false;
   });
   _unsubAttDay = onSnapshot(doc(db, 'attDay', key), snap => {
     if (snap.exists()) window._attDay[key] = snap.data();
@@ -203,6 +212,7 @@ if (window._unsubSwap) window._unsubSwap();
 }
 window._setLocalWrite = (type) => {
   if(type==='att') _localWriteAtt=true;
+  if(type==='attMeta') _localWriteAttMeta=true;
   if(type==='attDay') _localWriteAttDay=true;
   if(type==='hlReg') _localWriteHlReg=true;
   if(type==='hlDayReg') _localWriteHlDayReg=true;
@@ -219,6 +229,15 @@ async function saveAtt(m, y) {
     else await setDoc(doc(db, 'att', key), data);
     showSyncStatus('online');
   } catch(e) { showSyncStatus('error'); }
+}
+async function saveAttMeta(m, y) {
+  const key = m + '_' + y;
+  try {
+    showSyncStatus('saving');
+    if (window._setLocalWrite) window._setLocalWrite('attMeta');
+    await fbSetFull('attMeta', key, window._attMeta[key] || {});
+    showSyncStatus('online');
+  } catch(e) { console.error(e); showSyncStatus('error'); }
 }
 async function saveAttDay(m, y) {
   const key = m + '_' + y;
@@ -284,6 +303,7 @@ async function saveHolidays() {
 window._saveIconMap = saveIconMap;
 
 window._saveAtt = saveAtt;
+window._saveAttMeta = saveAttMeta;
 window._saveAttDay = saveAttDay;
 window._saveHlReg = saveHlReg;
 window._saveHlDayReg = saveHlDayReg;
@@ -319,10 +339,35 @@ async function fetchSwapRequests() {
 async function deleteSwapRequest(id) {
   await deleteDoc(doc(db, 'swapRequests', id));
 }
+
+// ── Realtime presence & collaborative cursors ───────────────
+let _unsubPresence = null;
+async function setPresence(userId, data) {
+  if (!userId) return;
+  await setDoc(doc(db, 'presence', userId), data, { merge: true });
+}
+async function removePresence(userId) {
+  if (!userId) return;
+  await deleteDoc(doc(db, 'presence', userId));
+}
+function listenPresence(onUpdate) {
+  if (_unsubPresence) _unsubPresence();
+  _unsubPresence = onSnapshot(collection(db, 'presence'), snap => {
+    const list = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+    if (onUpdate) onUpdate(list);
+  }, err => {
+    console.warn('Presence listener error:', err);
+    if (onUpdate) onUpdate([]);
+  });
+  return () => { if (_unsubPresence) { _unsubPresence(); _unsubPresence=null; } };
+}
 window._saveSwapRequest   = saveSwapRequest;
 window._updateSwapRequest = updateSwapRequest;
 window._fetchSwapRequests = fetchSwapRequests;
 window._deleteSwapRequest = deleteSwapRequest;
+window._setPresence = setPresence;
+window._removePresence = removePresence;
+window._listenPresence = listenPresence;
 window._writeLog     = writeLog;
 window._fetchLogs    = fetchLogs;
 window._deleteLogDoc = deleteLogDoc;
@@ -540,6 +585,12 @@ th.holiday-th{background:#c0392b!important;color:#fff!important;border-color:#a9
 .chk{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:clamp(10px,2vw,18px);font-weight:900;pointer-events:none;color:inherit}
 .chk.toi{color:var(--blue)}.chk.t7{color:var(--amber)}.chk.toicn{color:var(--teal)}
 .chk.hl{color:#c0392b;font-size:clamp(7px,1.2vw,10px)}
+.dc.vcn{position:relative}
+.sun-day-badge{position:absolute;right:3px;bottom:3px;min-width:15px;height:15px;padding:0 2px;border:1px solid var(--green);border-radius:8px;background:var(--green);color:#fff;font-size:8px;line-height:13px;font-weight:900;z-index:3;box-shadow:0 1px 4px rgba(22,163,74,.35)}
+@media(max-width:600px){.sun-day-badge{right:1px;bottom:1px;min-width:12px;height:12px;font-size:7px;line-height:10px}}
+.schedule-alerts{border:1px solid var(--gold-m);border-radius:9px;background:#fffaf0;color:var(--text2);font-size:12px;font-weight:700}
+.schedule-alerts summary{cursor:pointer;padding:8px 12px;color:var(--amber)}
+.schedule-alerts ul{margin:0;padding:0 18px 10px 30px;line-height:1.55;color:var(--text2);font-weight:600}
 td.dc:not(.no-edit):active{transform:scale(.93)}
 .s-btn:not(.no-edit):active,.hl-s-btn:not(.no-edit):active{transform:scale(.94)}
 tbody.rows tr:nth-child(even) td.nm{background:#f7f9fd}
@@ -841,6 +892,7 @@ tbody.rows tr:nth-child(even) td.nm:hover{background:#e9eff9}
 .avatar-view-img{width:140px;height:140px;font-size:52px;box-shadow:0 6px 20px rgba(0,0,0,0.15)}
 .avatar-view-name{font-size:15px;font-weight:800;color:var(--text)}
 
+</style>
 <style id="ui-upgrade-style">
 /* ============================================================
    1) NỀN TẢNG: biến root, bo góc, bóng đổ đa lớp, easing chung
@@ -1162,6 +1214,99 @@ tbody.rows tr.row-hover td.nm{
   transition:transform .15s, background .15s;
 }
 </style>
+<style id="schedule-layout-redesign">
+/* Lịch trực: ưu tiên khả năng đọc dữ liệu, giảm hiệu ứng trang trí gây nhiễu. */
+#t1{--schedule-name-width:220px}
+#t1>.card{border:1px solid var(--border);border-radius:16px;box-shadow:0 8px 28px rgba(24,38,68,.07);overflow:hidden;margin-bottom:18px}
+#t1>.card>.card-head{padding:14px 18px;background:var(--white);border-bottom:1px solid var(--border)}
+#t1 .schedule-section-title{padding:13px 18px 10px;font-size:14px;font-weight:800;color:var(--text);border-bottom:1px solid var(--border)}
+#t1 .schedule-overview-bar{padding:10px 18px 0;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:9px}
+#t1 .schedule-overview-bar>div:first-child{max-width:620px;line-height:1.55}
+#t1 .presence-bar{margin:9px 18px 0;padding:7px 10px;display:flex;align-items:center;gap:9px;border:1px solid var(--border);border-radius:10px;background:var(--surface);min-height:36px}
+#t1 .presence-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.45px;color:var(--text3);white-space:nowrap}
+#t1 .presence-users{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+#t1 .presence-user{display:inline-flex;align-items:center;gap:5px;padding:3px 8px 3px 5px;border:1px solid var(--border);border-radius:14px;background:var(--white);font-size:10.5px;font-weight:700;color:var(--text2)}
+#t1 .presence-avatar{width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:800}
+#t1 .presence-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 0 2px rgba(22,163,74,.14)}
+#t1 .presence-empty{font-size:10.5px;color:var(--text3)}
+#t1 .remote-cursor{position:absolute;z-index:30;pointer-events:none;transform:translate(-2px,-2px);transition:left .18s linear,top .18s linear;filter:drop-shadow(0 2px 2px rgba(24,38,68,.25))}
+#t1 .remote-cursor-arrow{font-size:19px;line-height:1;color:var(--cursor-color)}
+#t1 .remote-cursor-label{position:absolute;left:12px;top:14px;padding:2px 6px;border-radius:5px;background:var(--cursor-color);color:#fff;font-size:9px;font-weight:800;white-space:nowrap;box-shadow:0 2px 6px rgba(24,38,68,.2)}
+#t1 .toolbar{gap:10px;align-items:flex-end}
+#t1 .toolbar .fld label{margin-bottom:5px;color:var(--text3);font-size:10px;letter-spacing:.35px;text-transform:uppercase}
+#t1 .toolbar select,#t1 .toolbar input{height:38px;border-radius:9px;background:var(--white)}
+#t1 #scheduleAlerts{padding:8px 18px 10px}
+#t1 .schedule-alerts{background:var(--white);border-color:var(--gold-m);box-shadow:none}
+#t1 .schedule-alerts summary{padding:9px 12px}
+
+#t1 .legend{display:flex;flex-wrap:wrap;gap:7px 12px;padding:7px 10px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+#t1 .leg{gap:5px;font-size:10.5px;color:var(--text2);font-weight:700;white-space:nowrap}
+#t1 .leg-box{width:13px;height:11px;border-radius:3px}
+
+#t1 .matrix-wrap{margin:0;border:1px solid var(--border);border-radius:12px;overflow-x:auto;max-height:none;background:var(--white);box-shadow:inset 0 1px 0 rgba(255,255,255,.8)}
+#t1 table.mx{min-width:1320px;width:100%;table-layout:fixed}
+#t1 table.mx th,#t1 table.mx td{border-color:#dce5f2}
+#t1 .col-name{width:var(--schedule-name-width);min-width:var(--schedule-name-width)}
+#t1 .mx-r1,#t1 .mx-r2{position:sticky;z-index:12}
+#t1 .mx-r1{top:0;height:34px;background:#244f8f}
+#t1 .mx-r2{top:34px;height:24px;background:#193f79}
+#t1 .mx-r1 th{font-size:11px;color:rgba(255,255,255,.92)}
+#t1 .mx-r2 th{font-size:9px;color:rgba(255,255,255,.72)}
+#t1 .mx-r1 .th-nm,#t1 .mx-r2 .th-nm2{width:var(--schedule-name-width);min-width:var(--schedule-name-width);padding-left:12px;z-index:16}
+#t1 .mx-r2 .th-nm2{font-size:9px;color:rgba(255,255,255,.68)}
+#t1 td.nm{width:var(--schedule-name-width);min-width:var(--schedule-name-width);height:42px;padding:0 12px;font-size:12px;background:var(--white);box-shadow:3px 0 8px rgba(24,38,68,.07)}
+#t1 tbody.rows tr:nth-child(even) td.nm{background:#f8fafd}
+#t1 td.dc{height:42px;min-width:34px;background:var(--white)}
+#t1 tbody.rows tr:nth-child(even) td.dc.off{background:#f8fafd}
+#t1 td.dc.c-toi{background:#edf4ff}
+#t1 td.dc.c-t7{background:#fff8df}
+#t1 td.dc.c-toicn{background:#e9fbf6}
+#t1 td.dc.vcn.off{background:#f3fbf7}
+#t1 td.dc.vt7.off{background:#fffbeb}
+#t1 .chk{font-size:18px;line-height:1}
+#t1 .sun-day-badge{right:2px;bottom:2px;min-width:17px;height:17px;line-height:15px;font-size:9px;border:2px solid var(--white);box-shadow:0 1px 5px rgba(22,163,74,.32)}
+#t1 .cnt-row td{height:25px;font-size:10px;background:#f3f6fb}
+#t1 .cnt-row .nm{height:25px;background:#edf2f8;font-size:10px}
+
+/* Ngày hiện tại và crosshair: rõ nhưng không lấn át dữ liệu. */
+#t1 td.dc.today-col,#t1 th.today-th{animation:none!important;box-shadow:inset 0 0 0 2px var(--gold)!important}
+#t1 td.dc.today-col::before{display:none!important}
+#t1 th.today-th{background:var(--gold)!important;color:#fff!important}
+#t1 .wow-beam,#t1 .wow-crosshair-dot{display:none!important}
+#t1 tbody.rows tr.row-hover td.nm{transform:none;text-shadow:none;background:#fff7df!important;color:var(--blue-dd)}
+#t1 tbody.rows tr.row-hover td.dc{box-shadow:inset 0 1px rgba(244,163,29,.3),inset 0 -1px rgba(244,163,29,.3)}
+#t1 td.dc.col-hover{box-shadow:inset 1px 0 rgba(42,90,164,.22),inset -1px 0 rgba(42,90,164,.22)}
+
+/* Danh sách ca ngày CN là khu vực chỉnh sửa chi tiết, tách nhẹ khỏi ma trận. */
+#t1 #sunDayCard{border-color:var(--blue-m)}
+#t1 #sunDayCard>.card-head{background:linear-gradient(90deg,var(--blue-l),var(--white));border-bottom-color:var(--blue-m)!important;padding:13px 18px}
+#t1 #sunDayCard>.card-head>div:first-child{color:var(--blue)!important}
+#t1 .sun-row{padding:11px 18px;align-items:center;gap:14px}
+#t1 .sun-date{width:130px;padding:0}
+#t1 .sun-date .badge{font-size:11.5px;padding:4px 9px}
+#t1 .sun-staff{gap:6px}
+#t1 .s-btn{padding:5px 11px;font-size:11.5px;border-radius:8px}
+#t1 .s-btn.active{background:var(--blue);border-color:var(--blue);box-shadow:0 2px 7px rgba(42,90,164,.25)}
+
+@media(max-width:900px){
+  #t1{--schedule-name-width:170px}
+  #t1 .matrix-wrap{max-height:none;border-radius:8px}
+  #t1 table.mx{min-width:1250px}
+  #t1 td.nm,#t1 td.dc{height:38px}
+  #t1 .sun-row{align-items:flex-start}
+}
+@media(max-width:600px){
+  #t1{--schedule-name-width:145px}
+  #t1>.card{border-radius:12px}
+  #t1>.card>.card-head{padding:12px}
+  #t1 #scheduleAlerts{padding:7px 10px}
+  #t1 .legend{padding:6px 8px;gap:5px 9px}
+  #t1 table.mx{min-width:1160px}
+  #t1 td.nm{padding:0 7px;font-size:10.5px}
+  #t1 .sun-row{display:block;padding:10px 12px}
+  #t1 .sun-date{width:auto;margin-bottom:8px;flex-direction:row;align-items:center;flex-wrap:wrap}
+}
+</style>
 </head>
 <body>
 
@@ -1244,7 +1389,7 @@ tbody.rows tr.row-hover td.nm{
 </div>
 <div id="t1" class="panel active">
   <div id="permBanner1"></div>
-  <div class="card">
+  <div class="card schedule-main-card">
     <div class="card-head">
       <div class="toolbar">
         <div class="fld"><label>Tháng</label>
@@ -1259,23 +1404,32 @@ tbody.rows tr.row-hover td.nm{
               <button class="btn btn-red" id="btnClear" onclick="clearMonth()">🗑 Xóa tháng</button>
             </div>
           </div>
-    <div style="padding:14px 20px 4px;font-size:15px;font-weight:900;color:var(--text);border-bottom:1px solid var(--border)">🌙 Bảng Trực Ca Tối</div>
-    <div style="padding:10px 20px 0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
-      <div style="font-size:12px;color:var(--text3)">Nhấn ô để đánh dấu KTV trực ca tối. Ô 🎌 là ngày lễ – nhấn để đăng ký trực đêm lễ.</div>
+    <div class="schedule-section-title">🗓️ Lịch Trực Tổng Quan</div>
+    <div class="schedule-overview-bar">
+      <div style="font-size:12px;color:var(--text3)">Icon giữa ô là ca đêm. Huy hiệu ☀ xanh chỉ xuất hiện khi KTV trực ngày Chủ nhật; thiết lập ca ngày ở danh sách chi tiết bên dưới. Ô 🎌 là ngày lễ.</div>
       <div class="legend">
         <div class="leg"><div class="leg-box" style="background:#e8f0fc;border:1.5px solid var(--blue)"></div>Tối T2–T6 (4,5h)</div>
         <div class="leg"><div class="leg-box" style="background:#fef9c3;border:1.5px solid var(--amber)"></div>Tối T7 (6h)</div>
         <div class="leg"><div class="leg-box" style="background:var(--teal-l);border:1.5px solid var(--teal)"></div>Tối CN (4,5h)</div>
+        <div class="leg"><span style="display:inline-flex;width:15px;height:15px;align-items:center;justify-content:center;border-radius:8px;background:var(--green);color:#fff;font-size:8px">☀</span> Trực ngày CN</div>
         <div class="leg"><div class="leg-box" style="background:#ffd6d6;border:1.5px solid #c0392b"></div>🎌 Ngày lễ</div>
+        <div class="leg"><span style="color:var(--green);font-size:11px">●</span> KTV tự đăng ký</div>
+        <div class="leg"><span style="color:var(--amber);font-size:11px">●</span> Admin phân công</div>
+        <div class="leg"><span style="color:var(--text3);font-size:11px">●</span> Chưa xác định nguồn</div>
       </div>
     </div>
+    <div id="presenceBar" class="presence-bar" aria-live="polite">
+      <span class="presence-label">Đang online</span>
+      <div id="presenceUsers" class="presence-users"><span class="presence-empty">Đang kết nối...</span></div>
+    </div>
+    <div id="scheduleAlerts" style="padding:10px 20px 0"></div>
     <div style="padding:10px 0 16px"><div class="matrix-wrap" id="mxWrap"></div></div>
   </div>
 
-  <div class="card">
+  <div class="card" id="sunDayCard">
     <div class="card-head" style="background:var(--green-l);border-bottom-color:var(--green-m)">
       <div style="font-size:15px;font-weight:900;color:var(--green)">☀️ Danh Sách Trực Ngày Chủ Nhật (+1 Công chuẩn)</div>
-      <div style="font-size:12px;color:var(--text2)">Nhấn vào tên KTV để đăng ký ca Ngày CN.</div>
+      <div style="font-size:12px;color:var(--text2)">Chi tiết theo ngày; trạng thái ☀ cũng hiển thị ngay trong ma trận phía trên.</div>
     </div>
     <div id="sunWrap"></div>
   </div>
@@ -1755,6 +1909,7 @@ function canManageAccount(targetId){
 window._staff = [];
 window._accounts = [];
 window._att = {};
+window._attMeta = {};
 window._attDay = {};
 window._holidays = [];
 window._lockedStaff = [];
@@ -1805,8 +1960,9 @@ window._onFirebaseReady = function() {
 // ============================================================
 // PERMISSION HELPERS
 // ============================================================
-function isAdmin(){ return currentUser && currentUser.role === 'admin'; }
 function isVipUser(){ return currentUser && currentUser.id === VIP_ACCOUNT_ID; }
+// Admin thường có quyền quản trị; Super Admin có thêm các quyền đặc biệt như lịch sử và xóa tháng.
+function isAdmin(){ return !!currentUser && (currentUser.role === 'admin' || isVipUser()); }
 function myStaffLink(){ return currentUser ? (currentUser.staffLink || null) : null; }
 function isHNCS(){ return currentUser && currentUser.role === 'hncs'; }  
 
@@ -1851,7 +2007,9 @@ function canEditCell(n, m, y, d){
   if(!canEditMonth(m, y)) return false;
   const link = myStaffLink();
   if(!link) return false;
-  return n.trim() === link.trim();
+  if(n.trim() !== link.trim()) return false;
+  // KTV chỉ sửa ca tự đăng ký; ca do Super Admin phân công hoặc ca cũ chưa rõ nguồn đều chỉ xem.
+  return getAssignmentSource(m, y, n, d) === 'self';
 }
 function canEditSunDay(n, m, y, d){
   if(isAdmin()) return true;
@@ -1872,7 +2030,7 @@ function canEditHlReg(n, m, y, d){
 
 function getPermBannerHtml(m, y){
   if(isVipUser()) return `<div class="perm-banner vip">👑 <strong>Tài khoản VIP</strong> – Toàn quyền chỉnh sửa mọi tháng, kể cả ngày đã qua.</div>`;
-  if(isAdmin()) return `<div class="perm-banner vip" style="background:var(--blue-l);border-color:var(--blue-m);color:var(--blue)">🔑 <strong>Admin</strong> – Có thể chỉnh sửa ngày đã qua trong tháng này.</div>`;
+  if(isAdmin()) return `<div class="perm-banner vip" style="background:var(--blue-l);border-color:var(--blue-m);color:var(--blue)">🔑 <strong>Admin</strong> – Có thể chỉnh sửa và phân công lịch cho KTV.</div>`;
   if(isHNCS()) return `<div class="perm-banner" style="background:var(--purple-l);border:1.5px solid var(--purple-m);color:var(--purple)">📊 <strong>Hành chính nhân sự</strong> – Chỉ xem lịch trực và xuất báo cáo.</div>`;
   if(!canEditMonth(m, y)){
     const {todayY, todayM, todayD} = todayInfo();
@@ -2025,6 +2183,7 @@ function doLogin(){
   }, 350);
 }
 function doLogout(){
+  cleanupRealtimePresence(true);
   currentUser = null;
   sessionStorage.removeItem('_lichtruc_user');
   document.getElementById('appScreen').classList.remove('visible');
@@ -2066,6 +2225,7 @@ function initApp(){
 }
   updateMyIconBtn();
   renderAll();
+  initRealtimePresence();
   // Swap feature
   window._swapRequests = [];
   initSwapListener();
@@ -2114,14 +2274,32 @@ function onMonthYearChange(){
   const m=gM(), y=gY();
   if(window._startRealtimeListeners) window._startRealtimeListeners(m, y, ()=>renderAll());
   renderAll();
+  publishPresence(null);
 }
 
 function getC(m, y, n, d){ const k=mk(m,y); return window._att[k]&&window._att[k][n]?window._att[k][n][d]||null:null; }
-function setC(m, y, n, d, v){
+function getAssignmentMeta(m, y, n, d){ const k=mk(m,y); return window._attMeta[k]&&window._attMeta[k][n]?window._attMeta[k][n][d]||null:null; }
+function getAssignmentSource(m, y, n, d){ return getAssignmentMeta(m,y,n,d)?.source || 'unknown'; }
+function assignmentLabel(source){ return source==='admin'?'Admin phân công':source==='self'?'KTV tự đăng ký':'Chưa xác định nguồn'; }
+function assignmentDot(source){ return `<span style="font-size:8px;vertical-align:super;margin-left:1px;color:${source==='admin'?'var(--amber)':source==='self'?'var(--green)':'var(--text3)'}">●</span>`; }
+function setAssignmentMeta(m, y, n, d, meta){
+  const k=mk(m,y);
+  if(!window._attMeta[k]) window._attMeta[k]={};
+  if(!window._attMeta[k][n]) window._attMeta[k][n]={};
+  if(meta) window._attMeta[k][n][d]=meta; else delete window._attMeta[k][n][d];
+  if(window._saveAttMeta) window._saveAttMeta(m,y);
+}
+function setC(m, y, n, d, v, assignmentMeta=null){
   const k=mk(m,y);
   if(!window._att[k]) window._att[k]={};
   if(!window._att[k][n]) window._att[k][n]={};
   if(v) window._att[k][n][d]=v; else delete window._att[k][n][d];
+  if(v){
+    const ownLink = myStaffLink();
+    const isOwnShift = !!ownLink && n.trim() === ownLink.trim();
+    const source = assignmentMeta?.source || (isAdmin() && !isOwnShift ? 'admin' : 'self');
+    setAssignmentMeta(m,y,n,d, assignmentMeta || {source, assignedBy:currentUser?.name||'Hệ thống', assignedAt:Date.now()});
+  } else setAssignmentMeta(m,y,n,d,null);
   if(window._saveAtt) window._saveAtt(m,y);
 }
 function getCDay(m, y, n, d){ const k=mk(m,y); return window._attDay[k]&&window._attDay[k][n]?window._attDay[k][n][d]||false:false; }
@@ -2147,6 +2325,8 @@ function toggleSunDay(n, d){
     const isNow = getCDay(m, y, n, d);
     btn.classList.toggle('active', isNow);
   }
+  // Ma trận là màn hình tổng quan: cập nhật huy hiệu ☀ ngay khi thay đổi ca ngày CN.
+  renderMatrix();
 }
 
 // ============================================================
@@ -2225,7 +2405,7 @@ function switchTab(id, btn){
 // ============================================================
 // TOGGLE CA TỐI
 // ============================================================
-function toggle(n, d, dw){
+async function toggle(n, d, dw){
   if(!canEditCell(n, gM(), gY(), d)) return;
   const m=gM(), y=gY();
   const hl = getHolidayForDate(y, m, d);
@@ -2236,17 +2416,45 @@ function toggle(n, d, dw){
     return;
   }
   const cur = getC(m, y, n, d);
+  const curSource = cur ? getAssignmentSource(m,y,n,d) : null;
+  // Dữ liệu trước bản cập nhật không có attMeta. Super Admin phân loại thủ công
+  // để tránh hệ thống tự đoán sai người đã tạo ca.
+  if(cur && curSource === 'unknown' && isAdmin()){
+    const source = await _showDialog({
+      icon:'●', iconCls:'ic-info', title:'Phân loại ca dữ liệu cũ',
+      msg:`Ca của <strong>${n}</strong> ngày <strong>${d}/${m}/${y}</strong> chưa có thông tin người tạo.<br><span style="font-size:12px;color:var(--text3)">Chọn đúng nguồn để lưu vào database. Thao tác này không xóa ca.</span>`,
+      actions:[
+        {label:'Hủy', value:null},
+        {label:'KTV tự đăng ký', cls:'btn-green', value:'self'},
+        {label:'Admin phân công', cls:'btn-primary', value:'admin'}
+      ]
+    });
+    if(!source) return;
+    const k=mk(m,y);
+    if(!window._attMeta[k]) window._attMeta[k]={};
+    if(!window._attMeta[k][n]) window._attMeta[k][n]={};
+    window._attMeta[k][n][d]={source,assignedBy:currentUser.name,assignedAt:Date.now(),classifiedLegacy:true};
+    if(window._saveAttMeta) await window._saveAttMeta(m,y);
+    if(window._writeLog) window._writeLog({
+      userId:currentUser.id,userName:currentUser.name,action:'phan_loai_ca_cu',target:n,
+      detail:`${d}/${m}/${y} – ${assignmentLabel(source)}`,before:'unknown',after:source,month:m,year:y
+    });
+    renderMatrix();
+    showToast(`Đã lưu nguồn ca: ${assignmentLabel(source)}`, 'success');
+    return;
+  }
   let next;
   if(dw===0) next = cur==='toicn'?null:'toicn';
   else if(dw===6) next = cur==='t7'?null:'t7';
   else next = cur==='toi'?null:'toi';
   setC(m, y, n, d, next);
-  // FIX: chỉ update ô được click và hàng đếm
-  patchCell(n, d, dw, next, m, y);
+  const nextSource = next ? getAssignmentSource(m,y,n,d) : null;
+  // Render lại ma trận để giữ đồng thời icon ca đêm và huy hiệu trực ngày CN.
+  renderMatrix();
   if(window._writeLog) window._writeLog({
     userId: currentUser.id, userName: currentUser.name,
     action: 'ca_toi', target: n,
-    detail: `${d}/${m}/${gY()} – ${next?'Thêm '+next:'Bỏ ca'}`,
+    detail: `${d}/${m}/${gY()} – ${next?'Thêm '+next:'Bỏ ca'} (${assignmentLabel(next ? nextSource : curSource)})`,
     before: cur||null, after: next||null, month:m, year:gY()
   });
   patchCntRow(m, y);
@@ -2286,7 +2494,8 @@ function patchCell(n, d, dw, type, m, y){
     else inner=`<div class="chk hl">🎌</div>`;
   } else if(type){
     const ktvIcon = window._iconMap?.[n] || '✓';
-    inner=`<div class="chk ${type}">${ktvIcon}</div>`;
+    const src = getAssignmentSource(m,y,n,d);
+    inner=`<div class="chk ${type}" title="${assignmentLabel(src)}">${ktvIcon}${assignmentDot(src)}</div>`;
 }
   el.innerHTML = inner;
 }
@@ -2372,7 +2581,13 @@ h += `<td class="nm" data-name="${encodeURIComponent(n)}" title="${n} – bấm 
         if(isNightHl) inner=`<div class="chk toicn" style="font-size:14px">🌙${ktvIcon}</div>`;
         else inner=`<div class="chk hl" title="${hl.name}">🎌</div>`;
       } else if(type){
-        inner=`<div class="chk ${type}" style="font-size:16px">${ktvIcon}</div>`;
+        const source = getAssignmentSource(m,y,n,d);
+        inner=`<div class="chk ${type}" style="font-size:16px" title="${assignmentLabel(source)}">${ktvIcon}${assignmentDot(source)}</div>`;
+      }
+      // Trực ngày Chủ nhật chỉ hiện khi đã được phân công, để icon KTV của ca đêm luôn là trọng tâm.
+      if(dw===0){
+        const isDay = getCDay(m,y,n,d);
+        if(isDay) inner += `<span class="sun-day-badge" title="Trực ngày Chủ nhật">☀</span>`;
       }
       const cellid = cellId(n, d);
       h += `<td id="${cellid}" class="${cls}" data-name="${encodeURIComponent(n)}" data-d="${d}" data-dw="${dw}">${inner}</td>`;
@@ -2416,6 +2631,8 @@ h += `<td class="nm" data-name="${encodeURIComponent(n)}" title="${n} – bấm 
   };
   mxWrap.addEventListener('click', _mxClickHandler);
   initCrosshair();
+  bindPresenceCursor();
+  renderRemoteCursors();
 }
 
 // ============================================================
@@ -2587,9 +2804,143 @@ function renderHlReg(){
 function renderAll(){
   const m=gM(), y=gY();
   document.getElementById('permBanner1').innerHTML = getPermBannerHtml(m, y);
+  renderScheduleAlerts(m,y);
   renderMatrix();
   renderSunList();
   renderHlReg();
+}
+
+// ============================================================
+// REALTIME PRESENCE & COLLABORATIVE CURSORS
+// ============================================================
+window._presence = [];
+let _presenceUnsub = null, _presenceHeartbeat = null, _presenceMoveTimer = null;
+let _presencePendingCursor = null, _presenceLastCursorKey = '';
+
+function presenceColor(id){
+  let hash=0; for(const ch of String(id||'')) hash=((hash<<5)-hash)+ch.charCodeAt(0);
+  return `hsl(${Math.abs(hash)%360} 68% 43%)`;
+}
+function presenceInitial(name){
+  const parts=String(name||'?').trim().split(/\s+/); return (parts[parts.length-1]||'?').charAt(0).toUpperCase();
+}
+async function publishPresence(cursor=null){
+  if(!currentUser || !window._setPresence) return;
+  try{
+    await window._setPresence(currentUser.id,{
+      userId:currentUser.id,userName:currentUser.name||currentUser.username||'Người dùng',
+      staffLink:myStaffLink(),role:currentUser.role||'staff',lastSeen:Date.now(),
+      month:gM(),year:gY(),cursor
+    });
+  }catch(e){ console.warn('Presence write error:',e); }
+}
+function initRealtimePresence(){
+  cleanupRealtimePresence(false);
+  if(!currentUser || !window._listenPresence) return;
+  _presenceUnsub=window._listenPresence(list=>{
+    window._presence=list||[];
+    renderPresenceBar(); renderRemoteCursors();
+  });
+  publishPresence(null);
+  _presenceHeartbeat=setInterval(()=>publishPresence(_presencePendingCursor),12000);
+}
+function cleanupRealtimePresence(removeDoc=true){
+  if(_presenceUnsub){_presenceUnsub();_presenceUnsub=null;}
+  if(_presenceHeartbeat){clearInterval(_presenceHeartbeat);_presenceHeartbeat=null;}
+  if(_presenceMoveTimer){clearTimeout(_presenceMoveTimer);_presenceMoveTimer=null;}
+  const uid=currentUser?.id;
+  if(removeDoc && uid && window._removePresence) window._removePresence(uid).catch(()=>{});
+  window._presence=[];
+}
+function activePresence(){
+  const cutoff=Date.now()-45000;
+  return (window._presence||[]).filter(p=>Number(p.lastSeen||0)>=cutoff);
+}
+function renderPresenceBar(){
+  const host=document.getElementById('presenceUsers'); if(!host) return;
+  host.innerHTML='';
+  const list=activePresence();
+  if(!list.length){const e=document.createElement('span');e.className='presence-empty';e.textContent='Chưa có ai online';host.appendChild(e);return;}
+  list.sort((a,b)=>(a.userName||'').localeCompare(b.userName||'')).forEach(p=>{
+    const item=document.createElement('span');item.className='presence-user';
+    const av=document.createElement('span');av.className='presence-avatar';av.style.background=presenceColor(p.id);av.textContent=presenceInitial(p.userName);
+    const name=document.createElement('span');name.textContent=(p.id===currentUser?.id?'Bạn':(p.staffLink||p.userName));
+    const dot=document.createElement('span');dot.className='presence-dot';
+    item.append(av,name,dot);host.appendChild(item);
+  });
+}
+function bindPresenceCursor(){
+  const wrap=document.getElementById('mxWrap'); if(!wrap) return;
+  if(wrap._presenceMove) wrap.removeEventListener('mousemove',wrap._presenceMove);
+  if(wrap._presenceLeave) wrap.removeEventListener('mouseleave',wrap._presenceLeave);
+  if(wrap._presenceScroll) wrap.removeEventListener('scroll',wrap._presenceScroll);
+  wrap._presenceMove=e=>{
+    const td=e.target.closest('td.dc'); if(!td) return;
+    const rect=td.getBoundingClientRect();
+    const rx=Math.max(0,Math.min(1,Math.round(((e.clientX-rect.left)/rect.width)*10)/10));
+    const ry=Math.max(0,Math.min(1,Math.round(((e.clientY-rect.top)/rect.height)*10)/10));
+    const cursor={staff:decodeURIComponent(td.dataset.name||''),day:Number(td.dataset.d||0),rx,ry};
+    const key=`${gM()}|${gY()}|${cursor.staff}|${cursor.day}|${rx}|${ry}`;
+    if(key===_presenceLastCursorKey) return;
+    _presenceLastCursorKey=key; _presencePendingCursor=cursor;
+    if(!_presenceMoveTimer) _presenceMoveTimer=setTimeout(()=>{
+      _presenceMoveTimer=null; publishPresence(_presencePendingCursor);
+    },350);
+  };
+  wrap._presenceLeave=()=>{
+    _presencePendingCursor=null;_presenceLastCursorKey='';
+    if(_presenceMoveTimer){clearTimeout(_presenceMoveTimer);_presenceMoveTimer=null;}
+    publishPresence(null);
+  };
+  wrap._presenceScroll=()=>renderRemoteCursors();
+  wrap.addEventListener('mousemove',wrap._presenceMove);
+  wrap.addEventListener('mouseleave',wrap._presenceLeave);
+  wrap.addEventListener('scroll',wrap._presenceScroll,{passive:true});
+}
+function renderRemoteCursors(){
+  const wrap=document.getElementById('mxWrap'); if(!wrap) return;
+  wrap.querySelectorAll('.remote-cursor').forEach(el=>el.remove());
+  const m=gM(),y=gY(),wrapRect=wrap.getBoundingClientRect();
+  activePresence().filter(p=>p.id!==currentUser?.id&&Number(p.month)===m&&Number(p.year)===y&&p.cursor).forEach(p=>{
+    const c=p.cursor||{}; if(!c.staff||!c.day) return;
+    const td=document.getElementById(cellId(c.staff,Number(c.day))); if(!td) return;
+    const rect=td.getBoundingClientRect();
+    const el=document.createElement('div');el.className='remote-cursor';el.style.setProperty('--cursor-color',presenceColor(p.id));
+    el.style.left=`${rect.left-wrapRect.left+wrap.scrollLeft+(Number(c.rx)||0)*rect.width}px`;
+    el.style.top=`${rect.top-wrapRect.top+wrap.scrollTop+(Number(c.ry)||0)*rect.height}px`;
+    const arrow=document.createElement('div');arrow.className='remote-cursor-arrow';arrow.textContent='↖';
+    const label=document.createElement('div');label.className='remote-cursor-label';label.textContent=p.staffLink||p.userName||'KTV';
+    el.append(arrow,label);wrap.appendChild(el);
+  });
+}
+window.addEventListener('beforeunload',()=>{
+  const uid=currentUser?.id;
+  if(uid&&window._removePresence) window._removePresence(uid).catch(()=>{});
+});
+document.addEventListener('visibilitychange',()=>{
+  if(!currentUser) return;
+  if(document.hidden){_presencePendingCursor=null;publishPresence(null);}
+  else publishPresence(_presencePendingCursor);
+});
+
+function renderScheduleAlerts(m,y){
+  const host=document.getElementById('scheduleAlerts');
+  if(!host) return;
+  const issues=[];
+  const days=daysIn(y,m);
+  let unknownCount=0;
+  window._staff.filter(n=>!isStaffLocked(n)).forEach(n=>{
+    for(let d=1; d<=days; d++){
+      const night=getC(m,y,n,d);
+      if(night && getAssignmentSource(m,y,n,d)==='unknown') unknownCount++;
+      if(night && getCDay(m,y,n,d)) issues.push(`${n}: trực ngày CN và ca tối cùng ngày ${d}/${m}`);
+      if(night && d<days && getC(m,y,n,d+1)) issues.push(`${n}: trực 2 đêm liên tiếp (${d}–${d+1}/${m})`);
+    }
+  });
+  const legacyHtml = isAdmin() && unknownCount
+    ? `<div style="margin-top:6px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:12px;color:var(--text2)">● <strong>${unknownCount} ca dữ liệu cũ chưa rõ nguồn.</strong> Bấm vào ca có chấm xám để chọn “KTV tự đăng ký” hoặc “Admin phân công”.</div>` : '';
+  if(!issues.length){ host.innerHTML='<div style="font-size:12px;color:var(--green);font-weight:700">✅ Không phát hiện ca trực trùng hoặc trực đêm liên tiếp trong tháng.</div>'+legacyHtml; return; }
+  host.innerHTML=`<details class="schedule-alerts"><summary>⚠️ ${issues.length} cảnh báo lịch — bấm để xem chi tiết</summary><ul>${issues.map(x=>`<li>${x}</li>`).join('')}</ul></details>${legacyHtml}`;
 }
 
 // ============================================================
@@ -4358,6 +4709,9 @@ async function submitSwapRequest() {
   }
 
   const [myY, myM] = _swapMyDate.date.split('-').map(Number);
+  const myD = Number(_swapMyDate.date.split('-')[2]);
+  const isNightShift = ['toi','t7','toicn'].includes(_swapMyDate.type);
+  const assignmentSource = isNightShift ? getAssignmentSource(myM,myY,link,myD) : 'self';
   const req = {
     id:           'swap_' + Date.now(),
     status:       'pending',
@@ -4375,6 +4729,8 @@ async function submitSwapRequest() {
     theirShiftType: _swapTheirDate ? _swapTheirDate.type : null,
     theirShiftLabel: _swapTheirDate ? _swapTheirDate.label : null,
     reason,
+    assignmentSource,
+    requiresAdminApproval: assignmentSource === 'admin',
     month: myM, year: myY,
     // Giữ tương thích với code cũ
     myShift: ['toi','t7','toicn'].includes(_swapMyDate.type) ? _swapMyDate.type : null,
@@ -4398,9 +4754,16 @@ async function submitSwapRequest() {
 async function respondSwap(reqId, accept) {
   const req = (window._swapRequests || []).find(r => r.id === reqId);
   if (!req || req.status !== 'pending') { showToast('Yêu cầu không còn hợp lệ', 'warn'); return; }
+  if (getSwapExpiry(req)?.expired) {
+    await window._updateSwapRequest(reqId, { status:'expired', updatedAt:Date.now() });
+    showToast('Yêu cầu đổi ca đã hết hạn', 'warn'); return;
+  }
   const link = myStaffLink();
   if (!isAdmin() && req.targetStaff !== link) {
     await dlgAlert('Bạn không có quyền xử lý yêu cầu này!', { icon: '🔒', iconCls: 'ic-danger' }); return;
+  }
+  if (req.requiresAdminApproval && !isAdmin()) {
+    await dlgAlert('Đây là ca do Admin phân công. Yêu cầu cần Admin duyệt trước khi đổi ca.', { icon:'🛡️', iconCls:'ic-warn' }); return;
   }
   if (!accept) {
     const ok = await dlgConfirm(
@@ -4450,8 +4813,9 @@ async function executeSwap(req) {
     if (window._saveHlReg) await window._saveHlReg(myM, myY);
   } else {
     const fromShift = req.myShiftType || req.myShift || getC(myM, myY, req.fromStaff, myD);
+    const fromMeta = getAssignmentMeta(myM,myY,req.fromStaff,myD);
     setC(myM, myY, req.fromStaff, myD, null);
-    if (fromShift) setC(myM, myY, req.targetStaff, myD, fromShift);
+    if (fromShift) setC(myM, myY, req.targetStaff, myD, fromShift, fromMeta || {source:'self',assignedBy:currentUser?.name||'Hệ thống',assignedAt:Date.now()});
   }
   
  // Xử lý ca ngược lại nếu đổi 2 chiều
@@ -4482,8 +4846,9 @@ async function executeSwap(req) {
       if (window._saveHlReg) await window._saveHlReg(theirM, theirY);
     } else {
       const targetShift = req.theirShiftType || req.theirShift || getC(theirM, theirY, req.targetStaff, theirD);
+      const targetMeta = getAssignmentMeta(theirM,theirY,req.targetStaff,theirD);
       setC(theirM, theirY, req.targetStaff, theirD, null);
-      if (targetShift) setC(theirM, theirY, req.fromStaff, theirD, targetShift);
+      if (targetShift) setC(theirM, theirY, req.fromStaff, theirD, targetShift, targetMeta || {source:'self',assignedBy:currentUser?.name||'Hệ thống',assignedAt:Date.now()});
     }
   }
 
@@ -4572,7 +4937,7 @@ function renderSwapPanel() {
     const isTarget = req.targetStaff === link;
     const borderMap = {pending:'var(--gold)',accepted:'var(--green)',rejected:'var(--red)',cancelled:'var(--border2)'};
     const borderCol = borderMap[req.status] || 'var(--border2)';
-    const canRespond = req.status === 'pending' && isTarget && !isMine;
+    const canRespond = req.status === 'pending' && !isMine && (isAdmin() || (isTarget && !req.requiresAdminApproval));
     const canCancel  = req.status === 'pending' && (isAdmin() || isMine);
     const myLabel    = req.myShiftLabel  || (req.myDayCN  ? '☀️ Ca ngày CN' : req.myShift  ? `🌙 Ca tối (${req.myShift})`  : '?');
     const theirLabel = req.theirShiftLabel || (req.theirDayCN ? '☀️ Ca ngày CN' : req.theirShift ? `🌙 Ca tối (${req.theirShift})` : null);
@@ -4583,6 +4948,7 @@ function renderSwapPanel() {
           <div class="swap-card-title">🔄 ${req.fromStaff} → ${req.targetStaff || '📢 Tất cả'}</div>
           <div class="swap-card-meta">
             <span>🕐 ${fmtTime(req.createdAt)}</span>
+            ${req.requiresAdminApproval ? '<span>· 🛡️ cần Admin duyệt</span>' : ''}
             ${req.updatedAt !== req.createdAt ? `<span>· cập nhật ${fmtTime(req.updatedAt)}</span>` : ''}
             ${expiryBadge(req)}
           </div>
@@ -4734,6 +5100,10 @@ async function claimOpenShift(reqId) {
   if (!req || req.status !== 'pending') { 
     showToast('Ca này đã có người nhận rồi!', 'warn'); return; 
   }
+  if (getSwapExpiry(req)?.expired) {
+    await window._updateSwapRequest(reqId, {status:'expired', updatedAt:Date.now()});
+    showToast('Yêu cầu đổi ca đã hết hạn', 'warn'); return;
+  }
   const link = myStaffLink();
   if (!link) { 
     await dlgAlert('Tài khoản chưa liên kết KTV!', {icon:'⚠️', iconCls:'ic-warn'}); 
@@ -4742,6 +5112,10 @@ async function claimOpenShift(reqId) {
   if (req.fromStaff === link) { 
     await dlgAlert('Bạn không thể nhận ca của chính mình!', {icon:'⚠️', iconCls:'ic-warn'}); 
     return; 
+  }
+  if (req.requiresAdminApproval && !isAdmin()) {
+    await dlgAlert('Đây là ca do Admin phân công. Chỉ Admin có thể duyệt đổi ca.', {icon:'🛡️', iconCls:'ic-warn'});
+    return;
   }
   const ok = await dlgConfirm(
     `Nhận ca từ <strong>${req.fromStaff}</strong>?<br>
