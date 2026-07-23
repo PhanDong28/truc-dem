@@ -151,7 +151,7 @@ function startRealtimeListeners(m, y, onUpdate) {
     if (cu) {
       const me = window._accounts.find(a => a.id === cu.id);
       if (me) {
-        window._setCurrentUserAvatarEtc({ avatar: me.avatar || null, name: me.name, role: me.role, staffLink: me.staffLink });
+        window._setCurrentUserAvatarEtc({ avatar: me.avatar || null, name: me.name, role: me.role, staffLink: me.staffLink, phone: me.phone || '' });
         if (typeof updateHeaderAvatar === 'function') updateHeaderAvatar();
       }
     }
@@ -896,6 +896,7 @@ tbody.rows tr:nth-child(even) td.nm:hover{background:#e9eff9}
 .avatar-view-body{display:flex;align-items:center;justify-content:center}
 .avatar-view-img{width:140px;height:140px;font-size:52px;box-shadow:0 6px 20px rgba(0,0,0,0.15)}
 .avatar-view-name{font-size:15px;font-weight:800;color:var(--text)}
+.avatar-view-phone{font-size:13px;font-weight:700;color:var(--text2);display:flex;align-items:center;gap:6px}
 
 </style>
 <style id="ui-upgrade-style">
@@ -1614,6 +1615,7 @@ tbody.rows tr.row-hover td.nm{
       </div>
     </div>
     <div class="modal-field"><label>Họ và tên hiển thị</label><input type="text" id="mAccName" placeholder="Nguyễn Văn A..."></div>
+    <div class="modal-field"><label>SĐT</label><input type="tel" id="mAccPhone" maxlength="20" placeholder="Ví dụ: 0901 234 567"></div>
     <div class="modal-field"><label>Tên đăng nhập</label><input type="text" id="mAccUser" placeholder="nguyenvana"></div>
     <div class="modal-field"><label>Mật khẩu</label><input type="password" id="mAccPass" placeholder="••••••••"></div>
     <div class="modal-field" id="mAccRoleField">
@@ -1662,13 +1664,17 @@ tbody.rows tr.row-hover td.nm{
         <span style="font-size:11px;color:var(--text3);font-weight:600">JPG/PNG, tự resize nhỏ gọn</span>
       </div>
     </div>
+    <div class="modal-field" id="myPhoneField">
+      <label>Số điện thoại</label>
+      <input type="tel" id="myPhone" maxlength="20" placeholder="Ví dụ: 0901 234 567">
+    </div>
     <div class="modal-section">
       <div class="modal-section-title">Bảo mật</div>
       <button class="btn" style="width:100%;justify-content:center" onclick="closeModal('modalMyAccount');openPwdModal(currentUser.id)">🔒 Đổi mật khẩu của tôi</button>
     </div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('modalMyAccount')">Đóng</button>
-      <button class="btn btn-primary" onclick="saveMyAvatar()">💾 Lưu avatar</button>
+      <button class="btn btn-primary" onclick="saveMyAvatar()">💾 Lưu thông tin</button>
     </div>
   </div>
 </div>
@@ -1750,6 +1756,7 @@ tbody.rows tr.row-hover td.nm{
     <button class="avatar-view-close" onclick="closeAvatarView()">✕</button>
     <div id="avatarViewBody" class="avatar-view-body"></div>
     <div id="avatarViewName" class="avatar-view-name"></div>
+    <div id="avatarViewPhone" class="avatar-view-phone"></div>
   </div>
 </div>
 <div class="modal-bg hidden" id="modalSwap">
@@ -3238,11 +3245,15 @@ function avatarHtml(name, url, size, extraClass){
 }
 function openAvatarView(name){
   if(!name) return;
-  const url = getAvatarForStaff(name);
+  const acc = getAccountByStaff(name);
+  const url = acc ? (acc.avatar || null) : null;
   const isSelf = myStaffLink() && name.trim() === myStaffLink().trim();
   const body = document.getElementById('avatarViewBody');
   body.innerHTML = avatarHtml(name, url, 140, 'avatar-view-img');
   document.getElementById('avatarViewName').textContent = (isSelf ? '⭐ ' : '') + name;
+  document.getElementById('avatarViewPhone').textContent = acc && acc.phone
+    ? '📞 ' + acc.phone
+    : '📞 Chưa cập nhật SĐT';
   document.getElementById('avatarViewOverlay').classList.add('show');
 }
 function closeAvatarView(){
@@ -3302,20 +3313,29 @@ function openMyAccountModal(){
   if(!currentUser) return;
   _pendingAvatarMy = currentUser.avatar || null;
   renderAvatarPreview('my');
+  document.getElementById('myPhone').value = currentUser.phone || '';
+  document.getElementById('myPhoneField').style.display = isKTV() ? '' : 'none';
   document.getElementById('myAvatarFile').value = '';
   document.getElementById('modalMyAccount').classList.remove('hidden');
 }
 async function saveMyAvatar(){
   const acc = window._accounts.find(a=>a.id===currentUser.id); if(!acc) return;
+  const phone = isKTV() ? document.getElementById('myPhone').value.trim() : (acc.phone || '');
+  if(phone && !/^[0-9+().\s-]{7,20}$/.test(phone)){
+    await dlgAlert('Số điện thoại không hợp lệ.',{title:'SĐT không hợp lệ',icon:'⚠️',iconCls:'ic-warn'});
+    return;
+  }
   acc.avatar = (_pendingAvatarMy===undefined) ? (acc.avatar||null) : _pendingAvatarMy;
+  acc.phone = phone;
   currentUser.avatar = acc.avatar;
+  currentUser.phone = acc.phone;
   if(window._saveAccountDoc) await window._saveAccountDoc(acc);
   updateHeaderAvatar();
   if(typeof renderAll==='function') renderAll();
   const t4 = document.getElementById('t4');
   if(t4 && t4.classList.contains('active')) renderAccounts();
   closeModal('modalMyAccount');
-  showToast('Đã cập nhật avatar của bạn! 🖼️', 'success');
+  showToast('Đã cập nhật thông tin của bạn!', 'success');
 }
 
 function renderAccounts(){
@@ -3336,7 +3356,7 @@ function renderAccounts(){
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
           <span class="vip-crown">👑 Tài khoản VIP</span>
         </div>
-        <div class="acc-meta"><span>👤 ${a.username}</span>${a.staffLink?`<span>🔗 ${a.staffLink}</span>`:''}</div>
+        <div class="acc-meta"><span>👤 ${a.username}</span>${a.staffLink?`<span>🔗 ${a.staffLink}</span>`:''}${a.phone?`<span>📞 ${a.phone}</span>`:''}</div>
         <div class="acc-actions">
           ${canManage?`
             <button class="btn btn-sm btn-gold" onclick="openEditAccount('${a.id}')">✏️ Sửa</button>
@@ -3353,7 +3373,7 @@ function renderAccounts(){
           <div class="acc-role ${a.role==='admin'?'r-admin':a.role==='hncs'?'r-hncs':'r-staff'}">${a.role==='admin'?'🔑 Admin':a.role==='hncs'?'📊 Hành chính NS':'👤 Nhân viên'}</div>
         </div>
       </div>
-      <div class="acc-meta"><span>👤 ${a.username}</span>${a.staffLink?`<span>🔗 ${a.staffLink}</span>`:''}</div>
+      <div class="acc-meta"><span>👤 ${a.username}</span>${a.staffLink?`<span>🔗 ${a.staffLink}</span>`:''}${a.phone?`<span>📞 ${a.phone}</span>`:''}</div>
       <div class="acc-actions">
         ${(isVipUser() || a.role !== 'admin' || isSelf) ?
           `<button class="btn btn-sm btn-gold" onclick="openEditAccount('${a.id}')">✏️ Sửa</button>` : ''}
@@ -3378,7 +3398,7 @@ function populateStaffSelect(){
 function openAddAccount(){
   editAccId = null;
   document.getElementById('modalAccTitle').textContent = '➕ Thêm Tài Khoản';
-  ['mAccName','mAccUser','mAccPass'].forEach(id=>document.getElementById(id).value='');
+  ['mAccName','mAccPhone','mAccUser','mAccPass'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('mAccRole').value = 'staff';
   document.getElementById('mAccUser').disabled = false;
   document.getElementById('mAccRoleField').style.display = '';
@@ -3399,6 +3419,7 @@ function openEditAccount(id){
   editAccId = id;
   document.getElementById('modalAccTitle').textContent = '✏️ Sửa Tài Khoản';
   document.getElementById('mAccName').value = acc.name;
+  document.getElementById('mAccPhone').value = acc.phone || '';
   document.getElementById('mAccUser').value = acc.username;
   document.getElementById('mAccUser').disabled = true;
   document.getElementById('mAccPass').value = '';
@@ -3415,11 +3436,17 @@ function openEditAccount(id){
 }
 async function saveAccount(){
   const name = document.getElementById('mAccName').value.trim();
+  const phone = document.getElementById('mAccPhone').value.trim();
   const username = document.getElementById('mAccUser').value.trim();
   const pass = document.getElementById('mAccPass').value;
   const isEditingVip = editAccId && isVipAccount(editAccId);
   const role = isEditingVip ? 'admin' : document.getElementById('mAccRole').value;
   const staffLink = document.getElementById('mAccStaff').value || null;
+
+  if(phone && !/^[0-9+().\s-]{7,20}$/.test(phone)){
+    await dlgAlert('Số điện thoại không hợp lệ.',{title:'SĐT không hợp lệ',icon:'⚠️',iconCls:'ic-warn'});
+    return;
+  }
 
   // Kiểm tra quyền: admin thường không được sửa role của admin khác (trừ chính mình)
   if(editAccId && !isVipUser()){
@@ -3436,16 +3463,16 @@ async function saveAccount(){
   if(!editAccId&&window._accounts.find(a=>a.username===username)){ await dlgAlert(`Tên đăng nhập <strong>"${username}"</strong> đã tồn tại!`,{title:'Trùng username',icon:'⚠️',iconCls:'ic-warn'}); return; }
   if(editAccId){
     const acc = window._accounts.find(a=>a.id===editAccId); if(!acc) return;
-    acc.name=name; acc.role=role; acc.staffLink=staffLink; if(pass) acc.password=pass;
+    acc.name=name; acc.phone=phone; acc.role=role; acc.staffLink=staffLink; if(pass) acc.password=pass;
     acc.avatar = (_pendingAvatarAcc===undefined) ? (acc.avatar||null) : _pendingAvatarAcc;
     if(currentUser.id===editAccId){
-      currentUser.name=name; currentUser.role=role; currentUser.staffLink=staffLink; currentUser.avatar=acc.avatar;
+      currentUser.name=name; currentUser.phone=phone; currentUser.role=role; currentUser.staffLink=staffLink; currentUser.avatar=acc.avatar;
       document.getElementById('userBadgeName').textContent = name+(isVipUser()?' 👑':(role==='admin'?' (Admin)':''));
       updateHeaderAvatar();
     }
     if(window._saveAccountDoc) await window._saveAccountDoc(acc);
   } else {
-    const newAcc = {id:'acc_'+Date.now(), username, password:pass, name, role, staffLink, avatar:(_pendingAvatarAcc||null)};
+    const newAcc = {id:'acc_'+Date.now(), username, password:pass, name, phone, role, staffLink, avatar:(_pendingAvatarAcc||null)};
     window._accounts.push(newAcc);
     if(window._saveAccountDoc) await window._saveAccountDoc(newAcc);
   }
