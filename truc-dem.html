@@ -4093,6 +4093,39 @@ function renderDashboard(){
   const nowStr=`${String(todayD).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y}`;
   const daysLeft=days-todayD;
 
+  // Thông tin vận hành: ngày sắp tới chưa có người và lịch của chính người dùng.
+  const coverageAlerts=[];
+  const myUpcoming=[];
+  const myLink=myStaffLink();
+  for(let d=todayD;d<=days;d++){
+    const dw=dowOf(y,m,d);
+    const ds=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const hl=getHolidayForDate(y,m,d);
+    const nightNames=activeStaff.filter(n=>hl?isHlNightReg(m,y,ds,n):!!getC(m,y,n,d));
+    const dayNames=hl
+      ? activeStaff.filter(n=>isHlDayReg(m,y,ds,n))
+      : (dw===0?activeStaff.filter(n=>getCDay(m,y,n,d)):[]);
+    if(!nightNames.length){
+      coverageAlerts.push({d,dw,hl,label:hl?'Ca đêm lễ':'Ca tối',level:'danger'});
+    } else if(nightNames.length===1){
+      coverageAlerts.push({d,dw,hl,label:`Chỉ có ${nightNames[0]}`,level:'warn'});
+    }
+    if(hl&&!dayNames.length){
+      coverageAlerts.push({d,dw,hl,label:'Ca ngày lễ',level:'danger'});
+    }
+    if(myLink&&(nightNames.includes(myLink)||dayNames.includes(myLink))){
+      const types=[];
+      if(dayNames.includes(myLink)) types.push(hl?'Ngày lễ':'Ngày CN');
+      if(nightNames.includes(myLink)) types.push(hl?'Đêm lễ':'Ca tối');
+      myUpcoming.push({d,dw,hl,types});
+    }
+  }
+  const countValues=Object.values(staffCounts);
+  const avgCa=activeStaff.length?(totCa/activeStaff.length):0;
+  const minCa=countValues.length?Math.min(...countValues):0;
+  const maxCaActual=countValues.length?Math.max(...countValues):0;
+  const noShiftStaff=activeStaff.filter(n=>staffCounts[n]===0);
+
   // Biểu đồ bar theo từng người (inline SVG)
   const barW=320, barH=activeStaff.length*32+40;
   let svgBars='';
@@ -4162,6 +4195,22 @@ function renderDashboard(){
 .dsh-hl-item:last-child{border-bottom:none}
 .dsh-hl-badge{background:#c0392b;color:#fff;border-radius:7px;padding:3px 9px;font-size:11.5px;font-weight:800;white-space:nowrap}
 .dsh-ring-wrap{display:flex;align-items:center;gap:20px;padding:14px 18px}
+.dsh-alert{display:flex;align-items:flex-start;gap:10px;padding:10px 18px;border-bottom:1px solid var(--border)}
+.dsh-alert:last-child{border-bottom:none}
+.dsh-alert-date{min-width:72px;font-size:11.5px;font-weight:900;color:var(--text2)}
+.dsh-alert-main{flex:1;font-size:12.5px;font-weight:700;color:var(--text)}
+.dsh-alert-badge{font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;white-space:nowrap}
+.dsh-alert-badge.danger{background:var(--red-l);color:var(--red)}
+.dsh-alert-badge.warn{background:var(--gold-l);color:var(--amber)}
+.dsh-my-shift{display:flex;align-items:center;gap:12px;padding:11px 18px;border-bottom:1px solid var(--border)}
+.dsh-my-shift:last-child{border-bottom:none}
+.dsh-my-date{width:42px;height:42px;border-radius:10px;background:var(--blue-l);color:var(--blue);display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900}
+.dsh-my-date strong{font-size:17px;line-height:1}.dsh-my-date span{font-size:9px}
+.dsh-balance{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:14px 18px;border-top:1px solid var(--border)}
+.dsh-balance-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center}
+.dsh-balance-val{font:900 18px 'IBM Plex Mono',monospace;color:var(--blue)}
+.dsh-balance-lbl{font-size:9px;font-weight:800;color:var(--text3);text-transform:uppercase;margin-top:3px}
+@media(max-width:600px){.dsh-balance{grid-template-columns:repeat(2,1fr)}}
 </style>
 
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
@@ -4288,6 +4337,51 @@ function renderDashboard(){
     </div>
   </div>
 
+</div>
+
+<!-- ROW 3: CẢNH BÁO VẬN HÀNH + LỊCH CỦA TÔI -->
+<div class="dsh-row">
+  <div class="dsh-card">
+    <div class="dsh-card-title" style="padding-bottom:10px;border-bottom:1px solid var(--border)">
+      Cần xử lý sớm
+      <span style="float:right;color:${coverageAlerts.length?'var(--red)':'var(--green)'}">${coverageAlerts.length} cảnh báo</span>
+    </div>
+    ${coverageAlerts.length
+      ? coverageAlerts.slice(0,8).map(a=>`<div class="dsh-alert">
+          <div class="dsh-alert-date">${DOW_LBL[a.dw]}, ${a.d}/${m}</div>
+          <div class="dsh-alert-main">${a.hl?`🎌 ${a.hl.name} — `:''}${a.label}</div>
+          <span class="dsh-alert-badge ${a.level}">${a.level==='danger'?'CHƯA CÓ NGƯỜI':'ÍT NGƯỜI'}</span>
+        </div>`).join('')
+      : '<div class="dash-empty">✅ Các ca sắp tới đều đã có người đăng ký.</div>'}
+    ${coverageAlerts.length>8?`<div style="padding:9px 18px;font-size:11.5px;color:var(--text3);font-weight:700">Còn ${coverageAlerts.length-8} cảnh báo khác trong tháng.</div>`:''}
+  </div>
+
+  <div class="dsh-card">
+    <div class="dsh-card-title" style="padding-bottom:10px;border-bottom:1px solid var(--border)">Lịch sắp tới của tôi</div>
+    ${!myLink
+      ? '<div class="dash-empty">Tài khoản chưa liên kết với KTV.</div>'
+      : myUpcoming.length
+        ? myUpcoming.slice(0,6).map(s=>`<div class="dsh-my-shift">
+            <div class="dsh-my-date"><strong>${s.d}</strong><span>THÁNG ${m}</span></div>
+            <div style="flex:1">
+              <div style="font-size:12.5px;font-weight:800;color:var(--text)">${DOW_FULL[s.dw]}${s.hl?` — ${s.hl.name}`:''}</div>
+              <div style="font-size:11.5px;color:var(--text3);font-weight:700;margin-top:3px">${s.types.join(' • ')}</div>
+            </div>
+          </div>`).join('')
+        : '<div class="dash-empty">Bạn chưa có ca nào từ hôm nay đến cuối tháng.</div>'}
+  </div>
+</div>
+
+<!-- CÂN BẰNG PHÂN CA -->
+<div class="dsh-card dsh-section">
+  <div class="dsh-card-title">Cân bằng tải trong đội</div>
+  <div class="dsh-balance">
+    <div class="dsh-balance-item"><div class="dsh-balance-val">${avgCa.toFixed(1)}</div><div class="dsh-balance-lbl">Ca trung bình/KTV</div></div>
+    <div class="dsh-balance-item"><div class="dsh-balance-val" style="color:var(--green)">${minCa}</div><div class="dsh-balance-lbl">Ít ca nhất</div></div>
+    <div class="dsh-balance-item"><div class="dsh-balance-val" style="color:var(--amber)">${maxCaActual}</div><div class="dsh-balance-lbl">Nhiều ca nhất</div></div>
+    <div class="dsh-balance-item"><div class="dsh-balance-val" style="color:${noShiftStaff.length?'var(--red)':'var(--green)'}">${noShiftStaff.length}</div><div class="dsh-balance-lbl">KTV chưa có ca</div></div>
+  </div>
+  ${noShiftStaff.length?`<div style="padding:0 18px 14px;font-size:12px;color:var(--red);font-weight:700">Chưa có ca: ${noShiftStaff.join(', ')}</div>`:''}
 </div>
 
 ${upcomingHL.length?`
