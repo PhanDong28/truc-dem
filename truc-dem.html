@@ -1971,6 +1971,7 @@ function isVipUser(){ return currentUser && currentUser.id === VIP_ACCOUNT_ID; }
 function isAdmin(){ return !!currentUser && (currentUser.role === 'admin' || isVipUser()); }
 function myStaffLink(){ return currentUser ? (currentUser.staffLink || null) : null; }
 function isHNCS(){ return currentUser && currentUser.role === 'hncs'; }  
+function isKTV(){ return !!currentUser && currentUser.role === 'staff'; }
 
 function todayInfo(){
   const t = new Date();
@@ -2008,17 +2009,23 @@ function canEditMonth(m, y){
 // Hôm nay được sửa (isTodayDay → không bị chặn bởi isPastDay)
 function canEditCell(n, m, y, d){
   if(isAdmin()) return true;
+  if(!isKTV()) return false;
   // Ngày đã qua (không phải hôm nay) thì không được sửa
   if(isPastDay(m, y, d)) return false;
   if(!canEditMonth(m, y)) return false;
   const link = myStaffLink();
   if(!link) return false;
   if(n.trim() !== link.trim()) return false;
-  // KTV chỉ sửa ca tự đăng ký; ca do Super Admin phân công hoặc ca cũ chưa rõ nguồn đều chỉ xem.
+  // Ô trống phải được phép chọn để KTV có thể tự đăng ký ca mới.
+  // Với ca đã có, KTV chỉ được hủy ca do chính KTV tự đăng ký;
+  // ca Admin phân công hoặc dữ liệu cũ chưa rõ nguồn vẫn chỉ được xem.
+  const currentShift = getC(m, y, n, d);
+  if(!currentShift) return true;
   return getAssignmentSource(m, y, n, d) === 'self';
 }
 function canEditSunDay(n, m, y, d){
   if(isAdmin()) return true;
+  if(!isKTV()) return false;
   if(isPastDay(m, y, d)) return false;
   if(!canEditMonth(m, y)) return false;
   const link = myStaffLink();
@@ -2027,6 +2034,7 @@ function canEditSunDay(n, m, y, d){
 }
 function canEditHlReg(n, m, y, d){
   if(isAdmin()) return true;
+  if(!isKTV()) return false;
   if(isPastDay(m, y, d)) return false;
   if(!canEditMonth(m, y)) return false;
   const link = myStaffLink();
