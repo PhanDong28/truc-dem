@@ -46,6 +46,31 @@ async function fbGetAll(col) {
   return out;
 }
 
+const UI_CACHE_KEY = '_lichtruc_ui_cache_v2';
+function persistUiCache() {
+  try {
+    localStorage.setItem(UI_CACHE_KEY, JSON.stringify({
+      savedAt:Date.now(),
+      staff:window._staff||[], accounts:window._accounts||[],
+      att:window._att||{}, attMeta:window._attMeta||{}, attDay:window._attDay||{},
+      holidays:window._holidays||[], lockedStaff:window._lockedStaff||[],
+      hlReg:window._hlReg||{}, hlDayReg:window._hlDayReg||{}, iconMap:window._iconMap||{}
+    }));
+  } catch(e) { console.warn('UI cache unavailable:', e); }
+}
+function hydrateUiCache() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(UI_CACHE_KEY) || 'null');
+    if(!cached || !cached.savedAt) return false;
+    window._staff=cached.staff||[]; window._accounts=cached.accounts||[];
+    window._att=cached.att||{}; window._attMeta=cached.attMeta||{}; window._attDay=cached.attDay||{};
+    window._holidays=cached.holidays||[]; window._lockedStaff=cached.lockedStaff||[];
+    window._hlReg=cached.hlReg||{}; window._hlDayReg=cached.hlDayReg||{};
+    window._iconMap=cached.iconMap||{};
+    return true;
+  } catch(e) { return false; }
+}
+
 window._fbGet = fbGet;
 window._fbSet = fbSet;
 window._fbSetFull = fbSetFull;
@@ -123,6 +148,7 @@ async function loadAllFromFirebase() {
     window._hlDayReg = hlDayRegAll;
     window._iconMap = iconMapDoc ? iconMapDoc.map : {};
     window._scheduleDataReady = true;
+    persistUiCache();
     return true;
   } catch(e) {
     console.error('Load error:', e);
@@ -164,23 +190,34 @@ function startRealtimeListeners(m, y, onUpdate) {
   });
 
   const key = m + '_' + y;
+  // Ba lớp này cùng tạo nên một ô hoàn chỉnh: ca, nguồn người tick và ca ngày CN.
+  // Chỉ render realtime lần đầu khi cả ba snapshot đã về để tránh icon/chấm xuất hiện trễ từng phần.
+  const corePending = new Set(['att','attMeta','attDay']);
+  let coreRenderTimer = null;
+  const coreUpdated = type => {
+    corePending.delete(type);
+    persistUiCache();
+    if(corePending.size) return;
+    clearTimeout(coreRenderTimer);
+    coreRenderTimer = setTimeout(()=>{ if(onUpdate) onUpdate(); }, 30);
+  };
 
   _unsubAtt = onSnapshot(doc(db, 'att', key), snap => {
     if (snap.exists()) window._att[key] = snap.data();
     else delete window._att[key];
-    if (!_localWriteAtt) { if (onUpdate) onUpdate(); }
+    if (!_localWriteAtt) coreUpdated('att'); else { corePending.delete('att'); persistUiCache(); }
     _localWriteAtt = false;
   });
   _unsubAttMeta = onSnapshot(doc(db, 'attMeta', key), snap => {
     if (snap.exists()) window._attMeta[key] = snap.data();
     else delete window._attMeta[key];
-    if (!_localWriteAttMeta) { if (onUpdate) onUpdate(); }
+    if (!_localWriteAttMeta) coreUpdated('attMeta'); else { corePending.delete('attMeta'); persistUiCache(); }
     _localWriteAttMeta = false;
   });
   _unsubAttDay = onSnapshot(doc(db, 'attDay', key), snap => {
     if (snap.exists()) window._attDay[key] = snap.data();
     else delete window._attDay[key];
-    if (!_localWriteAttDay) { if (onUpdate) onUpdate(); }
+    if (!_localWriteAttDay) coreUpdated('attDay'); else { corePending.delete('attDay'); persistUiCache(); }
     _localWriteAttDay = false;
   });
   _unsubHlReg = onSnapshot(doc(db, 'hlReg', key), snap => {
@@ -389,6 +426,7 @@ window._bootstrapIfNeeded = bootstrapIfNeeded;
 window._loadAllFromFirebase = loadAllFromFirebase;
 
 window.addEventListener('DOMContentLoaded', async () => {
+  hydrateUiCache();
   await bootstrapIfNeeded();
   const ok = await loadAllFromFirebase();
   if (ok) {
