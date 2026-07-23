@@ -1615,7 +1615,7 @@ tbody.rows tr.row-hover td.nm{
       </div>
     </div>
     <div class="modal-field"><label>Họ và tên hiển thị</label><input type="text" id="mAccName" placeholder="Nguyễn Văn A..."></div>
-    <div class="modal-field"><label>SĐT</label><input type="tel" id="mAccPhone" maxlength="20" placeholder="Ví dụ: 0901 234 567"></div>
+    <div class="modal-field" id="mAccPhoneField"><label>SĐT</label><input type="tel" id="mAccPhone" maxlength="20" placeholder="Ví dụ: 0901 234 567"></div>
     <div class="modal-field"><label>Tên đăng nhập</label><input type="text" id="mAccUser" placeholder="nguyenvana"></div>
     <div class="modal-field"><label>Mật khẩu</label><input type="password" id="mAccPass" placeholder="••••••••"></div>
     <div class="modal-field" id="mAccRoleField">
@@ -1979,6 +1979,7 @@ function isAdmin(){ return !!currentUser && (currentUser.role === 'admin' || isV
 function myStaffLink(){ return currentUser ? (currentUser.staffLink || null) : null; }
 function isHNCS(){ return currentUser && currentUser.role === 'hncs'; }  
 function isKTV(){ return !!currentUser && currentUser.role === 'staff'; }
+function canEditOwnPhone(){ return !!currentUser && !isVipUser() && !!myStaffLink(); }
 
 function todayInfo(){
   const t = new Date();
@@ -3314,13 +3315,13 @@ function openMyAccountModal(){
   _pendingAvatarMy = currentUser.avatar || null;
   renderAvatarPreview('my');
   document.getElementById('myPhone').value = currentUser.phone || '';
-  document.getElementById('myPhoneField').style.display = isKTV() ? '' : 'none';
+  document.getElementById('myPhoneField').style.display = canEditOwnPhone() ? '' : 'none';
   document.getElementById('myAvatarFile').value = '';
   document.getElementById('modalMyAccount').classList.remove('hidden');
 }
 async function saveMyAvatar(){
   const acc = window._accounts.find(a=>a.id===currentUser.id); if(!acc) return;
-  const phone = isKTV() ? document.getElementById('myPhone').value.trim() : (acc.phone || '');
+  const phone = canEditOwnPhone() ? document.getElementById('myPhone').value.trim() : (acc.phone || '');
   if(phone && !/^[0-9+().\s-]{7,20}$/.test(phone)){
     await dlgAlert('Số điện thoại không hợp lệ.',{title:'SĐT không hợp lệ',icon:'⚠️',iconCls:'ic-warn'});
     return;
@@ -3402,6 +3403,7 @@ function openAddAccount(){
   document.getElementById('mAccRole').value = 'staff';
   document.getElementById('mAccUser').disabled = false;
   document.getElementById('mAccRoleField').style.display = '';
+  document.getElementById('mAccPhoneField').style.display = '';
   populateStaffSelect();
   document.getElementById('mAccStaff').value = '';
   updateRoleUI();
@@ -3420,6 +3422,7 @@ function openEditAccount(id){
   document.getElementById('modalAccTitle').textContent = '✏️ Sửa Tài Khoản';
   document.getElementById('mAccName').value = acc.name;
   document.getElementById('mAccPhone').value = acc.phone || '';
+  document.getElementById('mAccPhoneField').style.display = isVipAccount(id) ? 'none' : '';
   document.getElementById('mAccUser').value = acc.username;
   document.getElementById('mAccUser').disabled = true;
   document.getElementById('mAccPass').value = '';
@@ -3436,10 +3439,12 @@ function openEditAccount(id){
 }
 async function saveAccount(){
   const name = document.getElementById('mAccName').value.trim();
-  const phone = document.getElementById('mAccPhone').value.trim();
+  const phoneInput = document.getElementById('mAccPhone').value.trim();
   const username = document.getElementById('mAccUser').value.trim();
   const pass = document.getElementById('mAccPass').value;
   const isEditingVip = editAccId && isVipAccount(editAccId);
+  const vipAcc = isEditingVip ? window._accounts.find(a=>a.id===editAccId) : null;
+  const phone = isEditingVip ? (vipAcc?.phone || '') : phoneInput;
   const role = isEditingVip ? 'admin' : document.getElementById('mAccRole').value;
   const staffLink = document.getElementById('mAccStaff').value || null;
 
