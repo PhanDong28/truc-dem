@@ -258,8 +258,30 @@ if (window._unsubSwap) window._unsubSwap();
   _unsubManualBadges = onSnapshot(doc(db, 'config', 'manualBadges'), snap => {
     window._manualBadges = snap.exists() ? (snap.data().map || {}) : {};
     persistUiCache();
+    const cu = (typeof window._getCurrentUser === 'function') ? window._getCurrentUser() : null;
+    if (cu?.id && cu?.staffLink) {
+      const badges = window._manualBadges[cu.staffLink] || [];
+      const seenKey = `_lichtruc_seen_badges_${cu.id}`;
+      let seen = [];
+      try { seen = JSON.parse(localStorage.getItem(seenKey) || '[]'); } catch (_) {}
+      const newBadges = badges.filter(b => b.id && !seen.includes(b.id));
+      if (newBadges.length) {
+        localStorage.setItem(seenKey, JSON.stringify([...new Set([...seen, ...badges.map(b => b.id).filter(Boolean)])]));
+        setTimeout(() => {
+          const latest = newBadges[newBadges.length - 1];
+          const safe = value => String(value || '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+          if (typeof showToast === 'function') showToast(`Bạn vừa nhận huy hiệu ${latest.icon || '🏅'} ${latest.name}!`, 'success', 6000);
+          if (typeof dlgAlert === 'function') dlgAlert(
+            `<strong>${safe(latest.icon || '🏅')} ${safe(latest.name)}</strong>${latest.description ? `<br><span style="color:var(--text3)">${safe(latest.description)}</span>` : ''}`,
+            { title: newBadges.length > 1 ? `Bạn có ${newBadges.length} huy hiệu mới!` : 'Bạn có huy hiệu mới!', icon: '🎉', iconCls: 'ic-success' }
+          );
+        }, 250);
+      }
+    }
     const t2=document.getElementById('t2');
     if(t2&&t2.classList.contains('active')&&typeof renderStat==='function')renderStat();
+    const t4=document.getElementById('t4');
+    if(t4&&t4.classList.contains('active')&&typeof renderAccounts==='function')renderAccounts();
   });
 }
 window._setLocalWrite = (type) => {
@@ -1685,7 +1707,6 @@ tbody.rows tr.row-hover td.nm{
     </div>
     <div class="card-body">
       <div class="kpi-row" id="kpiRow"></div>
-      <div id="funStatsWrap"></div>
       <div class="stbl-card">
         <div class="head"><strong style="font-size:15px" id="statTitle">Bảng công</strong><span style="font-size:11px;color:var(--text3);font-weight:700">8h = 1 ngày công</span></div>
         <div style="overflow-x:auto">
@@ -1697,6 +1718,7 @@ tbody.rows tr.row-hover td.nm{
         </div>
       </div>
       <div class="formula" id="fBox"></div>
+      <div id="funStatsWrap"></div>
     </div>
   </div>
 </div>
@@ -1901,8 +1923,9 @@ tbody.rows tr.row-hover td.nm{
 <!-- Modal Admin trao huy hiệu -->
 <div class="modal-bg hidden" id="modalAwardBadge">
   <div class="modal" style="max-width:460px">
-    <div class="modal-title">🏅 Trao Huy Hiệu Cho KTV</div>
-    <div class="modal-field"><label>KTV nhận huy hiệu</label><select id="awardStaff"></select></div>
+    <div class="modal-title" id="awardModalTitle">🏅 Trao Huy Hiệu Cho KTV</div>
+    <div class="modal-field"><label>KTV nhận huy hiệu</label><select id="awardStaff" onchange="renderAwardExistingBadges()"></select></div>
+    <div id="awardExistingBadges" style="margin-bottom:14px"></div>
     <div class="modal-row">
       <div class="modal-field" style="max-width:90px"><label>Icon</label><input id="awardIcon" maxlength="4" value="🏅" style="text-align:center;font-size:22px"></div>
       <div class="modal-field"><label>Tên huy hiệu</label><input id="awardName" maxlength="36" placeholder="VD: Thánh sửa máy"></div>
@@ -1913,7 +1936,7 @@ tbody.rows tr.row-hover td.nm{
     </div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('modalAwardBadge')">Hủy</button>
-      <button class="btn btn-primary" onclick="saveAwardBadge()">🏅 Trao huy hiệu</button>
+      <button class="btn btn-primary" id="awardSaveBtn" onclick="saveAwardBadge()">🏅 Trao huy hiệu</button>
     </div>
   </div>
 </div>
@@ -3232,16 +3255,6 @@ function renderStat(){
     <div class="kpi g"><div class="kpi-lbl">Công quy đổi</div><div class="kpi-val">${totC.toFixed(2)}</div><div class="kpi-sub">÷ ${std}h/ngày</div></div>
     <div class="kpi r"><div class="kpi-lbl">Trực lễ ngày/đêm</div><div class="kpi-val">${totHLDay}/${totHLNight}</div><div class="kpi-sub">lượt đăng ký</div></div>`;
 
-  const awardBy=(scoreFn)=>{
-    const scored=rows.map(x=>({name:x.n,score:scoreFn(x.r,x.n)})).sort((a,b)=>b.score-a.score);
-    const max=scored[0]?.score||0;
-    return {score:max,names:max?scored.filter(x=>x.score===max).map(x=>x.name):[]};
-  };
-  const nightAward=awardBy(r=>r.nT+r.n7+r.nTC+r.nHLNight);
-  const sundayAward=awardBy(r=>r.nC+r.nTC);
-  const holidayAward=awardBy(r=>r.nHLDay+r.nHLNight);
-  const badgeAward=awardBy((r,n)=>getStaffBadges(n).length);
-  const awardName=a=>a.names.length?a.names.map(n=>n.split(' ').slice(-2).join(' ')).join(', '):'Chưa có';
   const badgeCards=rows.map(({n})=>{
     const badges=getStaffBadges(n);
     const encoded=encodeURIComponent(n);
@@ -3250,7 +3263,7 @@ function renderStat(){
       <div class="badge-profile-info">
         <div class="badge-profile-name">${n} <span style="color:var(--amber)">· ${badges.length} huy hiệu</span></div>
         <div class="profile-badge-list" style="justify-content:flex-start">
-          ${badges.slice(0,5).map(b=>`<span class="profile-badge ${b.cls}" title="${badgeText(b.tip)}">${badgeText(b.icon)} ${badgeText(b.name)}${b.manual&&isAdmin()?` <button onclick="event.stopPropagation();revokeManualBadge(decodeURIComponent('${encoded}'),'${b.id}')" title="Thu hồi" style="border:0;background:none;color:inherit;cursor:pointer;padding:0 0 0 3px;font-weight:900">×</button>`:''}</span>`).join('')}
+          ${badges.map(b=>`<span class="profile-badge ${b.cls}" title="${badgeText(b.tip)}">${badgeText(b.icon)} ${badgeText(b.name)}</span>`).join('')||'<span style="font-size:11px;color:var(--text3)">Chưa được trao huy hiệu</span>'}
           ${badges.length>5?`<span class="profile-badge">+${badges.length-5}</span>`:''}
         </div>
       </div>
@@ -3258,18 +3271,8 @@ function renderStat(){
   }).join('');
   document.getElementById('funStatsWrap').innerHTML=`
     <div class="fun-zone">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-        <div class="fun-zone-title">🎉 Góc vui đội kỹ thuật</div>
-        ${isAdmin()?'<button class="btn btn-gold btn-sm" onclick="openAwardBadgeModal()">🏅 Trao huy hiệu</button>':''}
-      </div>
-      <div class="fun-zone-sub">Danh hiệu tháng ${m}/${y} và bộ sưu tập huy hiệu tính từ toàn bộ lịch sử trực.</div>
-      <div class="fun-awards">
-        <div class="fun-award"><div class="fun-award-icon">🌙</div><div class="fun-award-title">Cú đêm tháng</div><div class="fun-award-name">${awardName(nightAward)}</div><div class="fun-award-score">${nightAward.score} ca tối</div></div>
-        <div class="fun-award"><div class="fun-award-icon">☀️</div><div class="fun-award-title">Chiến binh CN</div><div class="fun-award-name">${awardName(sundayAward)}</div><div class="fun-award-score">${sundayAward.score} ca Chủ nhật</div></div>
-        <div class="fun-award"><div class="fun-award-icon">🎌</div><div class="fun-award-title">Người giữ lễ</div><div class="fun-award-name">${awardName(holidayAward)}</div><div class="fun-award-score">${holidayAward.score} ca lễ</div></div>
-        <div class="fun-award"><div class="fun-award-icon">🏅</div><div class="fun-award-title">Nhà sưu tập</div><div class="fun-award-name">${awardName(badgeAward)}</div><div class="fun-award-score">${badgeAward.score} huy hiệu</div></div>
-      </div>
-      <div style="font-size:11px;font-weight:900;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin:2px 0 8px">Bộ sưu tập của cả đội</div>
+      <div class="fun-zone-title">🏅 Huy Hiệu cá nhân</div>
+      <div class="fun-zone-sub">Huy hiệu do Admin trao cho từng thành viên kỹ thuật.</div>
       <div class="badge-collection">${badgeCards}</div>
     </div>`;
   let tbody = '';
@@ -3573,24 +3576,10 @@ function getStaffCareerStats(name){
   return stats;
 }
 function getStaffBadges(name){
-  const s=getStaffCareerStats(name);
-  const team=(window._staff||[]).filter(n=>!isStaffLocked(n)).map(n=>({name:n,s:getStaffCareerStats(n)}));
-  const maxSunday=Math.max(0,...team.map(x=>x.s.sunday));
-  const badges=[{icon:'🔧',name:'Hội kỹ thuật',cls:'blue',tip:'Thành viên chính thức của hội anh em kỹ thuật'}];
-  if(s.total===0)badges.push({icon:'🐣',name:'Tân binh chờ ca',cls:'green',tip:'Đang chờ ca đầu tiên'});
-  else if(s.total<10)badges.push({icon:'🐾',name:'Đang lên tay',cls:'green',tip:`Đã bỏ túi ${s.total} ca`});
-  else badges.push({icon:'🐝',name:'Ong chăm ca',cls:'green',tip:`Đã bay qua ${s.total} ca`});
-  if(s.night>=10)badges.push({icon:'🦉',name:'Cú đêm chính hiệu',cls:'blue',tip:`Thức cùng ${s.night} ca tối`});
-  if(s.sunday>=3)badges.push({icon:'🧲',name:'Nam châm Chủ nhật',cls:'green',tip:`Chủ nhật cứ thấy tên (${s.sunday} ca)`});
-  if(s.holiday>=1)badges.push({icon:'🎪',name:'Lễ vẫn chill',cls:'gold',tip:`Đã trực ${s.holiday} ca lễ`});
-  if(s.self>=10)badges.push({icon:'👆',name:'Ngón tay vàng',cls:'green',tip:`Tự tay tick ${s.self} ca`});
-  if(s.swaps>=3)badges.push({icon:'🎭',name:'Ảo thuật gia đổi ca',cls:'blue',tip:`Biến hóa ${s.swaps} lần đổi/xin ca`});
-  if(s.rescues>=1)badges.push({icon:'🧯',name:'Cứu tinh phút chót',cls:'gold',tip:`Đã nhận giúp ${s.rescues} ca`});
-  if(s.sunday>0&&s.sunday===maxSunday)badges.push({icon:'👑',name:'Trùm Chủ nhật',cls:'gold',tip:'Đứng đầu hội mê Chủ nhật'});
   const manual=(window._manualBadges?.[name]||[]).map(b=>({
     ...b,cls:b.cls||'gold',tip:b.description||`Admin trao bởi ${b.awardedBy||'Admin'}`,manual:true
   }));
-  return [...manual,...badges];
+  return manual.slice(0,3);
 }
 function badgeText(v){
   return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -3598,18 +3587,51 @@ function badgeText(v){
 function staffBadgesHtml(name){
   const badges=getStaffBadges(name);
   return `<div style="font-size:10px;font-weight:900;color:var(--text3);text-align:center;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Huy hiệu (${badges.length})</div>
-    <div class="profile-badge-list">${badges.map(b=>`<span class="profile-badge ${b.cls}" title="${badgeText(b.tip)}">${badgeText(b.icon)} ${badgeText(b.name)}</span>`).join('')}</div>`;
+    <div class="profile-badge-list">${badges.map(b=>`<span class="profile-badge ${b.cls}" title="${badgeText(b.tip)}">${badgeText(b.icon)} ${badgeText(b.name)}</span>`).join('')||'<span style="font-size:11px;color:var(--text3)">Chưa có huy hiệu</span>'}</div>`;
 }
+let _editingManualBadge=null;
 function openAwardBadgeModal(preselect=''){
   if(!isAdmin())return;
+  _editingManualBadge=null;
   const sel=document.getElementById('awardStaff');
   sel.innerHTML=(window._staff||[]).filter(n=>!isStaffLocked(n)).map(n=>`<option value="${badgeText(n)}">${badgeText(n)}</option>`).join('');
   if(preselect)sel.value=preselect;
+  renderAwardExistingBadges();
   document.getElementById('awardIcon').value='🏅';
   document.getElementById('awardName').value='';
   document.getElementById('awardDescription').value='';
   document.getElementById('awardColor').value='gold';
+  document.getElementById('awardStaff').disabled=false;
+  document.getElementById('awardModalTitle').textContent='🏅 Trao Huy Hiệu Cho KTV';
+  document.getElementById('awardSaveBtn').textContent='🏅 Trao huy hiệu';
   document.getElementById('modalAwardBadge').classList.remove('hidden');
+}
+function renderAwardExistingBadges(){
+  const host=document.getElementById('awardExistingBadges');
+  if(!host)return;
+  const staff=document.getElementById('awardStaff').value;
+  const badges=(window._manualBadges?.[staff]||[]);
+  host.innerHTML=badges.length
+    ? `<div style="font-size:10px;font-weight:900;color:var(--text3);text-transform:uppercase;margin-bottom:7px">Huy hiệu hiện có (${badges.length}/3)</div>
+       <div class="profile-badge-list" style="justify-content:flex-start">${badges.map(b=>`<span class="profile-badge ${b.cls||'gold'}">${badgeText(b.icon)} ${badgeText(b.name)}
+       <button onclick="editManualBadge(decodeURIComponent('${encodeURIComponent(staff)}'),'${b.id}')" title="Sửa" style="border:0;background:none;color:inherit;cursor:pointer">✎</button>
+       <button onclick="revokeManualBadge(decodeURIComponent('${encodeURIComponent(staff)}'),'${b.id}')" title="Thu hồi" style="border:0;background:none;color:inherit;cursor:pointer;font-weight:900">×</button></span>`).join('')}</div>`
+    : '<div style="padding:9px 11px;background:var(--surface);border-radius:8px;font-size:11.5px;color:var(--text3)">KTV này chưa có huy hiệu.</div>';
+}
+function editManualBadge(staff,badgeId){
+  if(!isAdmin())return;
+  const badge=(window._manualBadges?.[staff]||[]).find(b=>b.id===badgeId);
+  if(!badge)return;
+  openAwardBadgeModal(staff);
+  _editingManualBadge={staff,badgeId};
+  document.getElementById('awardStaff').value=staff;
+  document.getElementById('awardStaff').disabled=true;
+  document.getElementById('awardIcon').value=badge.icon||'🏅';
+  document.getElementById('awardName').value=badge.name||'';
+  document.getElementById('awardDescription').value=badge.description||'';
+  document.getElementById('awardColor').value=badge.cls||'gold';
+  document.getElementById('awardModalTitle').textContent='✏️ Chỉnh Sửa Huy Hiệu';
+  document.getElementById('awardSaveBtn').textContent='💾 Lưu thay đổi';
 }
 async function saveAwardBadge(){
   if(!isAdmin())return;
@@ -3619,14 +3641,26 @@ async function saveAwardBadge(){
   const description=document.getElementById('awardDescription').value.trim();
   const cls=document.getElementById('awardColor').value;
   if(!staff||!name){await dlgAlert('Vui lòng chọn KTV và nhập tên huy hiệu!',{icon:'🏅',iconCls:'ic-warn'});return;}
-  if(!window._manualBadges[staff])window._manualBadges[staff]=[];
-  window._manualBadges[staff].push({
-    id:'badge_'+Date.now(),icon,name,description,cls,
-    awardedAt:Date.now(),awardedBy:currentUser.name
-  });
+  if(!_editingManualBadge && (window._manualBadges?.[staff]||[]).length>=3){
+    await dlgAlert('Mỗi KTV chỉ được tối đa 3 huy hiệu do Admin trao. Hãy sửa hoặc thu hồi một huy hiệu cũ trước!',{title:'Đã đủ 3 huy hiệu',icon:'🏅',iconCls:'ic-warn'});
+    return;
+  }
+  if(_editingManualBadge){
+    const target=(window._manualBadges?.[_editingManualBadge.staff]||[]).find(b=>b.id===_editingManualBadge.badgeId);
+    if(!target){await dlgAlert('Không tìm thấy huy hiệu cần sửa!',{icon:'⚠️',iconCls:'ic-warn'});return;}
+    Object.assign(target,{icon,name,description,cls,updatedAt:Date.now(),updatedBy:currentUser.name});
+  }else{
+    if(!window._manualBadges[staff])window._manualBadges[staff]=[];
+    window._manualBadges[staff].push({
+      id:'badge_'+Date.now(),icon,name,description,cls,
+      awardedAt:Date.now(),awardedBy:currentUser.name
+    });
+  }
   if(window._saveManualBadges)await window._saveManualBadges();
+  const wasEditing=!!_editingManualBadge;
+  _editingManualBadge=null;
   closeModal('modalAwardBadge');renderStat();
-  showToast(`Đã trao huy hiệu ${icon} ${name} cho ${staff}!`,'success');
+  showToast(wasEditing?`Đã cập nhật huy hiệu ${icon} ${name}!`:`Đã trao huy hiệu ${icon} ${name} cho ${staff}!`,'success');
 }
 async function revokeManualBadge(staff,badgeId){
   if(!isAdmin())return;
@@ -3636,7 +3670,9 @@ async function revokeManualBadge(staff,badgeId){
   if(!ok)return;
   window._manualBadges[staff]=(window._manualBadges[staff]||[]).filter(b=>b.id!==badgeId);
   if(window._saveManualBadges)await window._saveManualBadges();
-  renderStat();showToast('Đã thu hồi huy hiệu','info');
+  renderAwardExistingBadges();
+  const t2=document.getElementById('t2');if(t2&&t2.classList.contains('active'))renderStat();
+  showToast('Đã thu hồi huy hiệu','info');
 }
 function openAvatarView(name){
   if(!name) return;
@@ -3776,6 +3812,7 @@ function renderAccounts(){
       </div>
       <div class="acc-meta"><span>👤 ${a.username}</span>${a.staffLink?`<span>🔗 ${a.staffLink}</span>`:''}${a.phone?`<span>📞 ${a.phone}</span>`:''}</div>
       <div class="acc-actions">
+        ${isAdmin() && a.staffLink ? `<button class="btn btn-sm btn-gold" onclick="openAwardBadgeModal(decodeURIComponent('${encodeURIComponent(a.staffLink)}'))">🏅 Huy hiệu (${(window._manualBadges?.[a.staffLink]||[]).length}/3)</button>` : ''}
         ${(isVipUser() || a.role !== 'admin' || isSelf) ?
           `<button class="btn btn-sm btn-gold" onclick="openEditAccount('${a.id}')">✏️ Sửa</button>` : ''}
         ${(isVipUser() || a.role !== 'admin' || isSelf) ?
