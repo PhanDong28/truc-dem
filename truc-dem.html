@@ -1831,7 +1831,7 @@ tbody.rows tr.row-hover td.nm{
           </select>
         </div>
         <button class="btn btn-primary" onclick="loadAndRenderLog()">Tải lại</button>
-        <button class="btn btn-red" onclick="clearOldLogs()">🗑 Xóa &gt;90 ngày</button>
+        <button class="btn btn-red" onclick="clearOldLogs()">🗑 Dọn log &gt;10 ngày</button>
       </div>
     </div>
     <div id="logStats" style="padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;font-weight:700;color:var(--text2)"></div>
@@ -2530,8 +2530,10 @@ function initApp(){
     window._fetchSwapRequests().then(reqs => {
       window._swapRequests = reqs || [];
       updateSwapBadge();
+      cleanupExpiredSwapHistory();
     });
   }
+  if(isVipUser()) cleanupExpiredAdminLogs();
   // Kiểm tra swap mới sau khi load xong
 setTimeout(() => {
   const link2 = myStaffLink();
@@ -4357,6 +4359,23 @@ function stepMonth2(delta) {
 // CHANGELOG – Super Admin only
 // ============================================================
 let _cachedLogs = [];
+const ADMIN_LOG_RETENTION_MS = 10*24*60*60*1000;
+
+async function cleanupExpiredAdminLogs(force=false){
+  if(!isVipUser() || !window._fetchLogs || !window._deleteLogDoc) return 0;
+  const throttleKey='_lichtruc_log_cleanup_10d';
+  const last=Number(localStorage.getItem(throttleKey)||0);
+  if(!force && Date.now()-last<24*60*60*1000) return 0;
+  const logs=await window._fetchLogs(1000);
+  const cutoff=Date.now()-ADMIN_LOG_RETENTION_MS;
+  const expired=logs.filter(l=>l.ts<cutoff);
+  let deleted=0;
+  for(const log of expired){
+    try{ await window._deleteLogDoc(log.id); deleted++; }catch(e){}
+  }
+  localStorage.setItem(throttleKey,String(Date.now()));
+  return deleted;
+}
 
 async function loadAndRenderLog(){
   if(!isVipUser()) return;
@@ -4443,11 +4462,11 @@ function renderLog(){
 
 async function clearOldLogs(){
   if(!isVipUser()) return;
-  const cutoff = Date.now() - 90*24*60*60*1000;
+  const cutoff = Date.now() - ADMIN_LOG_RETENTION_MS;
   const oldLogs = _cachedLogs.filter(l=>l.ts < cutoff);
-  if(!oldLogs.length){ showToast('Không có log nào cũ hơn 90 ngày','info'); return; }
+  if(!oldLogs.length){ showToast('Không có log nào cũ hơn 10 ngày','info'); return; }
   const ok = await dlgConfirmDanger(
-    `Xóa <strong>${oldLogs.length}</strong> log cũ hơn 90 ngày?`,
+    `Xóa <strong>${oldLogs.length}</strong> log cũ hơn 10 ngày?`,
     {title:'Xóa log cũ',okLabel:'Xóa'}
   );
   if(!ok) return;
@@ -5313,6 +5332,22 @@ function setSwapMode(mode) {
   loadTheirShifts();
 }
 
+const SWAP_HISTORY_RETENTION_MS = 30*24*60*60*1000;
+async function cleanupExpiredSwapHistory(){
+  if(!isAdmin() || !window._deleteSwapRequest) return;
+  const throttleKey='_lichtruc_swap_cleanup_30d';
+  const last=Number(localStorage.getItem(throttleKey)||0);
+  if(Date.now()-last<24*60*60*1000) return;
+  const cutoff=Date.now()-SWAP_HISTORY_RETENTION_MS;
+  const expired=(window._swapRequests||[]).filter(r=>
+    r.status!=='pending' && (r.updatedAt||r.createdAt||0)<cutoff
+  );
+  for(const req of expired){
+    try{ await window._deleteSwapRequest(req.id); }catch(e){}
+  }
+  localStorage.setItem(throttleKey,String(Date.now()));
+}
+
 function openSwapModal(mode='swap') {
   const link = myStaffLink();
   if (!link && !isAdmin()) {
@@ -5720,7 +5755,7 @@ function renderSwapPanel() {
   const openShifts = all.filter(r => r.status === 'pending' && r.requestType !== 'request_shift' && (!r.targetStaff || r.isOpen) && r.fromStaff !== link);
   const incoming   = all.filter(r => r.status === 'pending' && !r.isOpen && (r.responderStaff || r.targetStaff) && ((r.responderStaff || r.targetStaff) === link || isAdmin())).sort((a,b)=>b.createdAt-a.createdAt);
   const outgoing   = all.filter(r => r.status === 'pending' && (r.requestType === 'request_shift' ? r.requestedByStaff === link : r.fromStaff === link)).sort((a,b)=>b.createdAt-a.createdAt);
-  const hist       = all.filter(r => r.status !== 'pending' && (isAdmin() || r.fromStaff === link || r.targetStaff === link || r.requestedByStaff === link || r.responderStaff === link) && (now-(r.updatedAt||r.createdAt)) < 7*24*3600*1000).sort((a,b)=>b.updatedAt-a.updatedAt).slice(0,15);
+  const hist       = all.filter(r => r.status !== 'pending' && (isAdmin() || r.fromStaff === link || r.targetStaff === link || r.requestedByStaff === link || r.responderStaff === link) && (now-(r.updatedAt||r.createdAt)) < SWAP_HISTORY_RETENTION_MS).sort((a,b)=>b.updatedAt-a.updatedAt).slice(0,30);
 
   // ── CA CẦN NGƯỜI NHẬN ──
   let openHtml = '';
@@ -5768,7 +5803,7 @@ function renderSwapPanel() {
   // ── LỊCH SỬ ──
   const histHtml = hist.length
     ? `<div class="swap-hist-sep">
-        <div class="swap-section-title">📋 Lịch sử 7 ngày gần nhất</div>
+        <div class="swap-section-title">📋 Lịch sử 30 ngày gần nhất</div>
         ${hist.map(makeCard).join('')}
       </div>`
     : '';
